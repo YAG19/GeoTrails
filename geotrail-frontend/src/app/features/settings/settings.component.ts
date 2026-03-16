@@ -74,69 +74,84 @@ import { ApiService } from '../../core/services/api.service';
   `,
   styles: [`
     .settings-page { padding: 24px; max-width: 800px; }
-    .page-title { margin: 0 0 24px; font-size: 1.5rem; color: #1a1a2e; }
+    .page-title { margin: 0 0 24px; font-size: 1.5rem; color: var(--text-primary); }
 
     .settings-section {
-      background: #fff;
+      background: var(--bg-card);
       padding: 24px;
       border-radius: 12px;
       margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      box-shadow: var(--shadow-md);
     }
-    .settings-section h3 { margin: 0 0 16px; font-size: 1.1rem; color: #333; }
+    .settings-section h3 { margin: 0 0 16px; font-size: 1.1rem; color: var(--text-secondary); }
 
     .setting-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 12px 0;
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid var(--border-subtle);
     }
     .setting-row:last-child { border-bottom: none; }
-    .setting-row label { font-weight: 500; color: #555; }
+    .setting-row label { font-weight: 500; color: var(--text-muted); }
     .setting-row select {
       padding: 8px 12px;
-      border: 1px solid #ddd;
+      border: 1px solid var(--border-light);
       border-radius: 8px;
       font-size: 0.9rem;
       min-width: 200px;
+      background: var(--bg-input);
+      color: var(--text-secondary);
     }
 
     .export-row { display: flex; flex-direction: column; gap: 12px; }
     .export-controls { display: flex; align-items: center; gap: 8px; }
-    .export-controls label { font-size: 0.85rem; color: #666; }
-    .export-controls input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; }
+    .export-controls label { font-size: 0.85rem; color: var(--text-muted); }
+    .export-controls input {
+      padding: 8px 12px;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      background: var(--bg-input);
+      color: var(--text-secondary);
+    }
     .export-buttons { display: flex; gap: 8px; }
     .btn-export {
       padding: 10px 20px;
-      background: #f5f5f5;
-      border: 1px solid #ddd;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
       border-radius: 8px;
       cursor: pointer;
       font-size: 0.9rem;
       transition: all 0.2s;
+      color: var(--text-secondary);
     }
     .btn-export:hover { background: #4fc3f7; color: #fff; border-color: #4fc3f7; }
 
-    .info-card { background: #f8f9fa; padding: 16px; border-radius: 8px; }
-    .info-card p { margin: 0 0 12px; color: #555; }
-    .info-card ol { margin: 0; padding-left: 20px; color: #555; line-height: 1.8; }
-    .info-card code { background: #e8e8e8; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
+    .info-card { background: var(--bg-surface); padding: 16px; border-radius: 8px; }
+    .info-card p { margin: 0 0 12px; color: var(--text-muted); }
+    .info-card ol { margin: 0; padding-left: 20px; color: var(--text-muted); line-height: 1.8; }
+    .info-card code {
+      background: var(--bg-muted);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
     .info-card a { color: #4fc3f7; }
 
-    .danger-zone { border: 1px solid #ffcdd2; }
-    .danger-zone h3 { color: #d32f2f; }
-    .danger-zone p { color: #888; font-size: 0.9rem; margin: 0 0 16px; }
+    .danger-zone { border: 1px solid var(--danger-border); }
+    .danger-zone h3 { color: var(--danger-text); }
+    .danger-zone p { color: var(--text-hint); font-size: 0.9rem; margin: 0 0 16px; }
     .btn-danger {
       padding: 10px 20px;
       background: transparent;
-      color: #d32f2f;
-      border: 1px solid #d32f2f;
+      color: var(--danger-text);
+      border: 1px solid var(--danger-text);
       border-radius: 8px;
       cursor: pointer;
       font-weight: 500;
     }
-    .btn-danger:hover { background: #ffeef0; }
+    .btn-danger:hover { background: var(--danger-bg); }
   `],
 })
 export class SettingsComponent {

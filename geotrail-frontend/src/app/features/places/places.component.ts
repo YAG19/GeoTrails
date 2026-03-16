@@ -56,26 +56,54 @@ import { Place } from '../../core/models/api.models';
   styles: [`
     .places-page { padding: 24px; max-width: 800px; }
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    .page-title { margin: 0; font-size: 1.5rem; color: #1a1a2e; }
+    .page-title { margin: 0; font-size: 1.5rem; color: var(--text-primary); }
     .btn-add { padding: 8px 20px; background: #4fc3f7; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; }
     .btn-add:hover { background: #29b6f6; }
 
-    .place-form { background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .place-form {
+      background: var(--bg-card);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-md);
+    }
     .form-row { display: flex; gap: 12px; margin-bottom: 12px; }
-    .form-row input { flex: 1; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; }
+    .form-row input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: var(--bg-input);
+      color: var(--text-secondary);
+    }
     .btn-save { padding: 10px 24px; background: #4caf50; color: #fff; border: none; border-radius: 8px; cursor: pointer; }
 
     .places-list { display: flex; flex-direction: column; gap: 8px; }
-    .place-card { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 16px 20px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .place-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+      padding: 16px 20px;
+      border-radius: 10px;
+      box-shadow: var(--shadow-sm);
+    }
     .place-info { display: flex; flex-direction: column; gap: 2px; }
-    .place-name { font-weight: 600; color: #333; font-size: 1rem; }
+    .place-name { font-weight: 600; color: var(--text-secondary); font-size: 1rem; }
     .place-category { font-size: 0.8rem; color: #4fc3f7; font-weight: 500; text-transform: uppercase; }
-    .place-coords { font-size: 0.8rem; color: #999; font-family: monospace; }
+    .place-coords { font-size: 0.8rem; color: var(--text-hint); font-family: monospace; }
     .place-actions { display: flex; align-items: center; gap: 12px; }
-    .place-radius { font-size: 0.85rem; color: #666; background: #f5f5f5; padding: 2px 8px; border-radius: 4px; }
+    .place-radius {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      background: var(--bg-surface);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
     .btn-delete { padding: 4px 12px; background: transparent; color: #ef5350; border: 1px solid #ef5350; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
-    .btn-delete:hover { background: #ffeef0; }
-    .empty-msg { text-align: center; color: #999; padding: 40px; }
+    .btn-delete:hover { background: var(--danger-bg); }
+    .empty-msg { text-align: center; color: var(--text-hint); padding: 40px; }
   `],
 })
 export class PlacesComponent implements OnInit {

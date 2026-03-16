@@ -70,48 +70,56 @@ import { ImportJob } from '../../core/models/api.models';
   `,
   styles: [`
     .import-page { padding: 24px; max-width: 800px; }
-    .page-title { margin: 0 0 24px; font-size: 1.5rem; color: #1a1a2e; }
+    .page-title { margin: 0 0 24px; font-size: 1.5rem; color: var(--text-primary); }
 
     .drop-zone {
-      border: 2px dashed #ccc;
+      border: 2px dashed var(--border-color);
       border-radius: 16px;
       padding: 48px;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s;
-      background: #fff;
+      background: var(--bg-card);
     }
-    .drop-zone:hover { border-color: #4fc3f7; background: #f0faff; }
+    .drop-zone:hover { border-color: #4fc3f7; background: var(--bg-hover); }
     .drop-icon { font-size: 3rem; margin-bottom: 12px; }
-    .drop-zone p { margin: 4px 0; color: #555; }
-    .drop-hint { font-size: 0.85rem; color: #999; }
+    .drop-zone p { margin: 4px 0; color: var(--text-muted); }
+    .drop-hint { font-size: 0.85rem; color: var(--text-hint); }
 
     .progress-card {
       margin-top: 24px;
-      background: #fff;
+      background: var(--bg-card);
       padding: 24px;
       border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      box-shadow: var(--shadow-md);
     }
-    .progress-card h3 { margin: 0 0 16px; font-size: 1rem; }
-    .progress-bar { height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; }
+    .progress-card h3 { margin: 0 0 16px; font-size: 1rem; color: var(--text-secondary); }
+    .progress-bar { height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
     .progress-fill { height: 100%; background: linear-gradient(90deg, #4fc3f7, #0288d1); border-radius: 4px; transition: width 0.3s; }
-    .progress-stats { display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.85rem; color: #666; }
-    .error-count { color: #d32f2f; font-size: 0.85rem; }
+    .progress-stats { display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.85rem; color: var(--text-muted); }
+    .error-count { color: var(--danger-text); font-size: 0.85rem; }
 
     .jobs-section { margin-top: 32px; }
-    .jobs-section h3 { margin: 0 0 16px; font-size: 1.1rem; color: #333; }
+    .jobs-section h3 { margin: 0 0 16px; font-size: 1.1rem; color: var(--text-secondary); }
     .jobs-list { display: flex; flex-direction: column; gap: 8px; }
-    .job-card { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 16px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .job-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: var(--shadow-sm);
+    }
     .job-info { display: flex; flex-direction: column; gap: 2px; }
-    .job-filename { font-weight: 500; color: #333; }
-    .job-date { font-size: 0.8rem; color: #999; }
-    .job-meta { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; color: #666; }
+    .job-filename { font-weight: 500; color: var(--text-secondary); }
+    .job-date { font-size: 0.8rem; color: var(--text-hint); }
+    .job-meta { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; color: var(--text-muted); }
     .job-status { padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
-    .job-status.completed { background: #e8f5e9; color: #2e7d32; }
-    .job-status.processing { background: #fff3e0; color: #f57c00; }
-    .job-status.failed { background: #ffeef0; color: #d32f2f; }
-    .job-status.pending { background: #f5f5f5; color: #999; }
+    .job-status.completed { background: var(--success-bg); color: var(--success-text); }
+    .job-status.processing { background: var(--warning-bg); color: var(--warning-text); }
+    .job-status.failed { background: var(--danger-bg); color: var(--danger-text); }
+    .job-status.pending { background: var(--bg-surface); color: var(--text-hint); }
   `],
 })
 export class ImportComponent implements OnInit, OnDestroy {
