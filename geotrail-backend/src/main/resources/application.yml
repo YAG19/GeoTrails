@@ -79,10 +79,51 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: "*"
+      base-path: /actuator
   endpoint:
     health:
-      show-details: when_authorized
+      show-details: always
+      show-components: always
+    info:
+      enabled: true
+    env:
+      enabled: true
+      show-values: always
+    configprops:
+      enabled: true
+      show-values: always
+    loggers:
+      enabled: true
+    metrics:
+      enabled: true
+    threaddump:
+      enabled: true
+    heapdump:
+      enabled: true
+    beans:
+      enabled: true
+    mappings:
+      enabled: true
+    conditions:
+      enabled: true
+    scheduledtasks:
+      enabled: true
+    caches:
+      enabled: true
+    httptrace:
+      enabled: true
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    os:
+      enabled: true
+    build:
+      enabled: true
+    git:
+      enabled: true
 
 # --- OpenAPI ---
 springdoc:
