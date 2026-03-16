@@ -1,0 +1,12 @@
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+    show-sql: false
+
+logging:
+  level:
+    com.geotrail: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
