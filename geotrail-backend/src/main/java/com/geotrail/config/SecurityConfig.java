@@ -48,7 +48,7 @@ public class SecurityConfig {
                         // Public endpoints
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()  // WebSocket handshake
                         // OwnTracks endpoint uses its own auth (HTTP Basic or token in payload)
                         .requestMatchers(HttpMethod.POST, "/owntracks").permitAll()
