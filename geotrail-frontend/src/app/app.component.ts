@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from './core/auth/auth.service';
+import { ThemeService } from './core/services/theme.service';
 
 @Component({
   selector: 'app-root',
@@ -48,6 +49,9 @@ import { AuthService } from './core/auth/auth.service';
             </li>
           </ul>
           <div class="sidebar-footer">
+            <button class="theme-toggle-btn" (click)="themeService.toggleTheme()" [title]="themeService.isDarkMode() ? 'Switch to light mode' : 'Switch to dark mode'">
+              {{ themeService.isDarkMode() ? '☀️ Light Mode' : '🌙 Dark Mode' }}
+            </button>
             <button class="logout-btn" (click)="authService.logout()">
               Logout
             </button>
@@ -133,6 +137,25 @@ import { AuthService } from './core/auth/auth.service';
     .sidebar-footer {
       padding: 16px 20px;
       border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .theme-toggle-btn {
+      width: 100%;
+      padding: 10px;
+      background: rgba(79, 195, 247, 0.1);
+      color: #4fc3f7;
+      border: 1px solid rgba(79, 195, 247, 0.3);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+
+    .theme-toggle-btn:hover {
+      background: rgba(79, 195, 247, 0.2);
     }
 
     .logout-btn {
@@ -154,10 +177,11 @@ import { AuthService } from './core/auth/auth.service';
     .content {
       flex: 1;
       overflow: auto;
-      background: #f5f5f5;
+      background: var(--bg-page);
     }
   `],
 })
 export class AppComponent {
   authService = inject(AuthService);
+  themeService = inject(ThemeService);
 }

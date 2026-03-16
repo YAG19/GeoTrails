@@ -41,8 +41,8 @@ import { LocationPoint } from '../../core/models/api.models';
       justify-content: space-between;
       align-items: center;
       padding: 12px 20px;
-      background: #fff;
-      border-bottom: 1px solid #e0e0e0;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
       flex-shrink: 0;
     }
 
@@ -54,25 +54,28 @@ import { LocationPoint } from '../../core/models/api.models';
 
     .date-controls label {
       font-size: 0.85rem;
-      color: #666;
+      color: var(--text-muted);
       font-weight: 500;
     }
 
     .date-controls input {
       padding: 6px 10px;
-      border: 1px solid #ddd;
+      border: 1px solid var(--border-light);
       border-radius: 6px;
       font-size: 0.9rem;
+      background: var(--bg-input);
+      color: var(--text-secondary);
     }
 
     .btn-sm {
       padding: 6px 12px;
-      background: #f0f0f0;
-      border: 1px solid #ddd;
+      background: var(--bg-muted);
+      border: 1px solid var(--border-light);
       border-radius: 6px;
       font-size: 0.8rem;
       cursor: pointer;
       transition: all 0.2s;
+      color: var(--text-secondary);
     }
 
     .btn-sm:hover {
@@ -85,12 +88,12 @@ import { LocationPoint } from '../../core/models/api.models';
       display: flex;
       gap: 16px;
       font-size: 0.9rem;
-      color: #555;
+      color: var(--text-muted);
     }
 
     .stats-bar span {
       padding: 4px 12px;
-      background: #f5f5f5;
+      background: var(--bg-surface);
       border-radius: 12px;
       font-weight: 500;
     }
