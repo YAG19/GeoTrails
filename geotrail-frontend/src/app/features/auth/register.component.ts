@@ -42,7 +42,6 @@ import { AuthService } from '../../core/auth/auth.service';
       </div>
     </div>
   `,
-  styleUrl: [],
   styles: [`
     .auth-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); }
     .auth-card { background: #fff; padding: 48px 40px; border-radius: 16px; width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
