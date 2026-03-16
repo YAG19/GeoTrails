@@ -38,13 +38,35 @@ import { LocationPoint } from '../../core/models/api.models';
   `,
   styles: [`
     .live-page { height: 100%; display: flex; flex-direction: column; }
-    .live-header { display: flex; align-items: center; gap: 16px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #e0e0e0; }
-    .live-header h2 { margin: 0; font-size: 1.2rem; }
-    .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; background: #ffeef0; color: #d32f2f; }
-    .status-badge.connected { background: #e8f5e9; color: #2e7d32; }
+    .live-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 20px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .live-header h2 { margin: 0; font-size: 1.2rem; color: var(--text-primary); }
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: var(--danger-bg);
+      color: var(--danger-text);
+    }
+    .status-badge.connected { background: var(--success-bg); color: var(--success-text); }
     .btn-connect { padding: 6px 16px; background: #4fc3f7; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
     .btn-disconnect { padding: 6px 16px; background: #ef5350; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
-    .last-point-info { display: flex; gap: 16px; padding: 8px 20px; background: #fafafa; border-bottom: 1px solid #eee; font-size: 0.85rem; color: #555; }
+    .last-point-info {
+      display: flex;
+      gap: 16px;
+      padding: 8px 20px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
     .map-container { flex: 1; min-height: 0; }
   `],
 })

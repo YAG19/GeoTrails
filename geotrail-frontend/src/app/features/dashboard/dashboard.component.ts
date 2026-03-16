@@ -54,7 +54,7 @@ import { DashboardSummary, DailyStat } from '../../core/models/api.models';
   `,
   styles: [`
     .dashboard { padding: 24px; max-width: 1200px; }
-    .page-title { margin: 0 0 24px; font-size: 1.5rem; color: #1a1a2e; }
+    .page-title { margin: 0 0 24px; font-size: 1.5rem; color: var(--text-primary); }
 
     .stats-grid {
       display: grid;
@@ -64,35 +64,35 @@ import { DashboardSummary, DailyStat } from '../../core/models/api.models';
     }
 
     .stat-card {
-      background: #fff;
+      background: var(--bg-card);
       border-radius: 12px;
       padding: 24px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-md);
     }
 
     .stat-value {
       font-size: 2rem;
       font-weight: 700;
-      color: #1a1a2e;
+      color: var(--text-primary);
       margin-bottom: 4px;
     }
 
     .stat-label {
       font-size: 0.9rem;
-      color: #888;
+      color: var(--text-hint);
     }
 
     .chart-section {
-      background: #fff;
+      background: var(--bg-card);
       border-radius: 12px;
       padding: 24px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      box-shadow: var(--shadow-md);
     }
 
     .chart-section h3 {
       margin: 0 0 16px;
       font-size: 1.1rem;
-      color: #333;
+      color: var(--text-secondary);
     }
 
     .chart-container { overflow-x: auto; }
@@ -129,7 +129,7 @@ import { DashboardSummary, DailyStat } from '../../core/models/api.models';
 
     .bar-label {
       font-size: 0.65rem;
-      color: #999;
+      color: var(--text-hint);
       margin-top: 4px;
     }
   `],

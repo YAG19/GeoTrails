@@ -61,24 +61,24 @@ import { AuthService } from '../../core/auth/auth.service';
     }
 
     .auth-card {
-      background: #fff;
+      background: var(--bg-card);
       padding: 48px 40px;
       border-radius: 16px;
       width: 100%;
       max-width: 420px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--shadow-lg);
     }
 
     .auth-title {
       text-align: center;
       font-size: 2rem;
-      color: #1a1a2e;
+      color: var(--text-primary);
       margin: 0 0 4px;
     }
 
     .auth-subtitle {
       text-align: center;
-      color: #888;
+      color: var(--text-hint);
       margin: 0 0 32px;
       font-size: 0.95rem;
     }
@@ -91,18 +91,20 @@ import { AuthService } from '../../core/auth/auth.service';
       display: block;
       margin-bottom: 6px;
       font-weight: 500;
-      color: #333;
+      color: var(--text-secondary);
       font-size: 0.9rem;
     }
 
     input {
       width: 100%;
       padding: 12px 16px;
-      border: 2px solid #e0e0e0;
+      border: 2px solid var(--border-color);
       border-radius: 10px;
       font-size: 1rem;
       transition: border-color 0.2s;
       box-sizing: border-box;
+      background: var(--bg-input);
+      color: var(--text-secondary);
     }
 
     input:focus {
@@ -134,8 +136,8 @@ import { AuthService } from '../../core/auth/auth.service';
     }
 
     .error-msg {
-      background: #ffeef0;
-      color: #d32f2f;
+      background: var(--danger-bg);
+      color: var(--danger-text);
       padding: 12px 16px;
       border-radius: 8px;
       margin-bottom: 20px;
@@ -145,7 +147,7 @@ import { AuthService } from '../../core/auth/auth.service';
     .auth-link {
       text-align: center;
       margin-top: 24px;
-      color: #888;
+      color: var(--text-hint);
       font-size: 0.9rem;
     }
 
