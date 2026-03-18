@@ -85,4 +85,17 @@ public class ImportController {
                 .createdAt(job.getCreatedAt())
                 .build();
     }
+
+
+    @GetMapping("/{id}/test")
+    public ResponseEntity<ApiResponse<ImportJobDto>> test(@AuthenticationPrincipal User user,
+                                                        @PathVariable Long id,
+                                                        @RequestParam("file") MultipartFile file) {
+        //Retry the importjob for id
+        // ImportJob job = importService.getJob(id);
+        ImportJob job = importService.startGoogleTimelineImport(user, file);
+
+        
+        return ResponseEntity.ok(ApiResponse.success(toDto(importService.getJob(id))));
+    }   
 }

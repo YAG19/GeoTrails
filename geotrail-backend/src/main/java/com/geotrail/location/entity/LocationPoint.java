@@ -4,6 +4,8 @@ import com.geotrail.auth.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.locationtech.jts.geom.Point;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 
@@ -47,7 +49,22 @@ public class LocationPoint {
     @Builder.Default
     private String source = "live";
 
+    /**
+     * Store original payload as JSONB.
+     *
+     * The key issue: Hibernate by default binds String as VARCHAR.
+     * PostgreSQL rejects VARCHAR → JSONB implicit cast.
+     *
+     * Fix: @JdbcTypeCode(SqlTypes.JSON) tells Hibernate to use PG's JSON type
+     * when binding the parameter, so PostgreSQL accepts it.
+     *
+     * Alternative fix (application.yml):
+     *   spring.jpa.properties.hibernate.dialect.non_contextual_creation=true
+     *   spring.datasource.hikari.data-source-properties.stringtype=unspecified
+     * But that's a global nuclear option — @JdbcTypeCode is per-field and explicit.
+     */
     @Column(name = "raw_payload", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String rawPayload;
 
     @Column(name = "created_at", updatable = false)
