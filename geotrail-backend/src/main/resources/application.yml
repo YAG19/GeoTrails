@@ -17,9 +17,9 @@ spring:
 
   # --- Database ---
   datasource:
-    url: jdbc:postgresql://172.17.0.1/geotrail
-    username: geotrail
-    password: geotrail_dev
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://172.17.0.1/geotrail}
+    username: ${SPRING_DATASOURCE_USERNAME:geotrail}
+    password: ${SPRING_DATASOURCE_PASSWORD:geotrail_dev}
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
