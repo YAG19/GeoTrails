@@ -32,7 +32,7 @@ spring:
       ddl-auto: validate  # Flyway manages schema, Hibernate only validates
     properties:
       hibernate:
-        dialect: org.hibernate.spatial.dialect.postgis.PostgisPG10Dialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         jdbc:
           time_zone: UTC
