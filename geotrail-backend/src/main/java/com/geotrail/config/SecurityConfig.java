@@ -84,7 +84,8 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(
                 "http://localhost:4200",   // Angular dev server
                 "http://localhost:80",     // Docker frontend
-                "http://localhost"
+                "http://localhost",
+                System.getenv().getOrDefault("FRONTEND_URL", "")
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
