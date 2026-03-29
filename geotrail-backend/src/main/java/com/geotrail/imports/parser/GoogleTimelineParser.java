@@ -183,6 +183,8 @@ public class GoogleTimelineParser {
                     points.addAll(activityPoints);
                 }
 
+         
+
             } catch (Exception e) {
                 errors++;
                 if (errors <= 20) {
@@ -266,8 +268,15 @@ public class GoogleTimelineParser {
         String startTime = segment.path("startTime").asText(null);
         String endTime = segment.path("endTime").asText(null);
 
-        // Start point
-        String startStr = activity.path("start").asText(null);
+        JsonNode topCandidate = activity.path("topCandidate");
+        String activityType = topCandidate.path("type").asText(null);
+
+        Double distanceMeters = activity.has("distanceMeters")
+                ? activity.get("distanceMeters").asDouble()
+                : null;
+
+        // Start point — carries the distance for the whole segment
+        String startStr = extractCoordString(activity.path("start"));
         if (startStr != null && startTime != null) {
             double[] coords = parseAnyCoordFormat(startStr);
             Instant ts = parseTimestamp(startTime);
@@ -276,13 +285,15 @@ public class GoogleTimelineParser {
                 req.setLatitude(coords[0]);
                 req.setLongitude(coords[1]);
                 req.setRecordedAt(ts);
+                req.setActivityType(activityType);
+                req.setDistanceMeters(distanceMeters);
                 req.setSource("google_semantic_activity");
                 points.add(req);
             }
         }
 
         // End point
-        String endStr = activity.path("end").asText(null);
+        String endStr = extractCoordString(activity.path("end"));
         if (endStr != null && endTime != null) {
             double[] coords = parseAnyCoordFormat(endStr);
             Instant ts = parseTimestamp(endTime);
@@ -291,6 +302,7 @@ public class GoogleTimelineParser {
                 req.setLatitude(coords[0]);
                 req.setLongitude(coords[1]);
                 req.setRecordedAt(ts);
+                req.setActivityType(activityType);
                 req.setSource("google_semantic_activity");
                 points.add(req);
             }
@@ -311,6 +323,7 @@ public class GoogleTimelineParser {
                         req.setLatitude(coords[0]);
                         req.setLongitude(coords[1]);
                         req.setRecordedAt(ts);
+                        req.setActivityType(activityType);
                         req.setSource("google_semantic_waypoint");
                         points.add(req);
                     }
@@ -324,13 +337,18 @@ public class GoogleTimelineParser {
                         req.setLatitude(lat);
                         req.setLongitude(lon);
                         req.setRecordedAt(ts);
+                        req.setActivityType(activityType);
                         req.setSource("google_semantic_waypoint");
                         points.add(req);
                     }
                 }
             }
         }
-
+        // LOG POINTS
+        for (CreateRequest req : points) {
+                log.info("Parsed point: {} {} Activity: {}" , req.getLatitude(), req.getLongitude(), req.getActivityType());
+        }
+        log.info("Parsed {} points from segments ( errors)", points.size());
         return points;
     }
 
@@ -594,6 +612,20 @@ public class GoogleTimelineParser {
     }
 
     // ==================== COORDINATE PARSERS ====================
+
+    /**
+     * Extract a coordinate string from a node that is either:
+     *   - A plain string: "geo:lat,lon" or "lat°, lon°"
+     *   - An object with a "latLng" field: { "latLng": "lat°, lon°" }
+     */
+    private String extractCoordString(JsonNode node) {
+        if (node == null || node.isMissingNode()) return null;
+        if (node.isTextual()) return node.asText(null);
+        // Object format: { "latLng": "12.991765°, 77.6521968°" }
+        JsonNode latLng = node.path("latLng");
+        if (!latLng.isMissingNode()) return latLng.asText(null);
+        return null;
+    }
 
     /**
      * Parse degree-string coordinates: "13.0286824°, 77.6655964°"

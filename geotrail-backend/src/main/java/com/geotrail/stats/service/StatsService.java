@@ -1,6 +1,7 @@
 package com.geotrail.stats.service;
 
 import com.geotrail.location.repository.LocationPointRepository;
+import com.geotrail.stats.dto.ActivityDistanceDto;
 import com.geotrail.stats.dto.DashboardSummaryDto;
 import com.geotrail.stats.dto.DailyStatDto;
 import com.geotrail.stats.entity.DailyStat;
@@ -51,6 +52,16 @@ public class StatsService {
                 .pointsLast30Days(points30d)
                 .distanceThisYearM(distanceYear)
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ActivityDistanceDto> getActivityDistances(Long userId, LocalDate from, LocalDate to) {
+        Instant fromInstant = from.atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant toInstant   = to.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        return locationRepo.sumDistanceByActivityType(userId, fromInstant, toInstant)
+                .stream()
+                .map(row -> new ActivityDistanceDto((String) row[0], ((Number) row[1]).doubleValue()))
+                .toList();
     }
 
     @Transactional(readOnly = true)

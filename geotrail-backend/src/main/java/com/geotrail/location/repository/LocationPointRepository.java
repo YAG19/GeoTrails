@@ -116,4 +116,27 @@ public interface LocationPointRepository extends JpaRepository<LocationPoint, Lo
             @Param("from") Instant from,
             @Param("to") Instant to
     );
+
+    /**
+     * Sum distance_meters per activity_type within a date range.
+     * Only rows with a non-null, positive distance_meters value are included
+     * (live-tracking points have null; only imported activity start-points carry this value).
+     */
+    @Query(value = """
+        SELECT lp.activity_type  AS activityType,
+               SUM(lp.distance_meters) AS totalDistanceM
+        FROM location_points lp
+        WHERE lp.user_id = :userId
+          AND lp.recorded_at BETWEEN :from AND :to
+          AND lp.activity_type IS NOT NULL
+          AND lp.distance_meters IS NOT NULL
+          AND lp.distance_meters > 0
+        GROUP BY lp.activity_type
+        ORDER BY totalDistanceM DESC
+        """, nativeQuery = true)
+    List<Object[]> sumDistanceByActivityType(
+            @Param("userId") Long userId,
+            @Param("from") Instant from,
+            @Param("to") Instant to
+    );
 }

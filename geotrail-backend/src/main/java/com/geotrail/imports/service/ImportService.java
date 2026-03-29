@@ -136,4 +136,11 @@ public class ImportService {
             importJobRepo.save(job);
         }
     }
+
+    public ImportJob retryForUserId(Long id) {
+        ImportJob job = importJobRepo.findById(id).orElse(null);
+        if (job == null) return null;
+        
+        return job;
+    }
 }

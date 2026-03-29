@@ -97,5 +97,16 @@ public class ImportController {
 
         
         return ResponseEntity.ok(ApiResponse.success(toDto(importService.getJob(id))));
-    }   
+    } 
+
+     @GetMapping("/{id}/retry")
+    public ResponseEntity<ApiResponse<ImportJobDto>> retry(@AuthenticationPrincipal User user,
+                                                        @PathVariable Long id) {
+        //Retry the importjob for id
+        // ImportJob job = importService.getJob(id);
+        ImportJob job = importService.retryForUserId(id);
+
+        
+        return ResponseEntity.ok(ApiResponse.success(toDto(importService.getJob(id))));
+    }  
 }

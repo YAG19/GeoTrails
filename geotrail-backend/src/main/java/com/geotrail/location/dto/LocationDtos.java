@@ -31,6 +31,8 @@ public final class LocationDtos {
         private Double velocity;
         private Instant recordedAt;  // defaults to now if null
         private String source;
+        private String activityType;
+        private Double distanceMeters;
     }
 
     @Data
@@ -46,6 +48,8 @@ public final class LocationDtos {
         private Double velocity;
         private Instant recordedAt;
         private String source;
+        private String activityType;
+        private Double distanceMeters;
         private Instant createdAt;
     }
 

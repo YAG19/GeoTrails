@@ -116,12 +116,15 @@ public class LocationService {
     public int batchInsert(User user, List<CreateRequest> requests) {
         if (requests.isEmpty()) return 0;
 
+        for(int i = 0 ; i < 5; i++) {
+          log.info("Processing batch {} of {}", i, requests.get(i));   
+        }
         final String sql = """
             INSERT INTO location_points
                 (user_id, coordinates, altitude, accuracy, battery_level, velocity,
-                 recorded_at, source, created_at)
+                 recorded_at, source, activity_type, distance_meters, created_at)
             VALUES
-                (?, ST_SetSRID(ST_MakePoint(?, ?), 4326), ?, ?, ?, ?, ?, ?, NOW())
+                (?, ST_SetSRID(ST_MakePoint(?, ?), 4326), ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ON CONFLICT (user_id, recorded_at, source) DO NOTHING
             """;
 
@@ -146,7 +149,9 @@ public class LocationService {
                     req.getBatteryLevel(),
                     req.getVelocity(),
                     Timestamp.from(req.getRecordedAt()),
-                    req.getSource() != null ? req.getSource() : "import"
+                    req.getSource() != null ? req.getSource() : "import",
+                    req.getActivityType(),
+                    req.getDistanceMeters()
             });
 
             // Flush every 1000 rows
@@ -187,6 +192,8 @@ public class LocationService {
                 .velocity(point.getVelocity())
                 .recordedAt(point.getRecordedAt())
                 .source(point.getSource())
+                .activityType(point.getActivityType())
+                .distanceMeters(point.getDistanceMeters())
                 .createdAt(point.getCreatedAt())
                 .build();
     }

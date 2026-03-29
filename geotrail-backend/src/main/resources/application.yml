@@ -6,6 +6,9 @@ server:
 spring:
   application:
     name: geotrail
+  devtools:
+    restart:
+      enabled: true
 
   # --- Virtual Threads (Java 21) ---
   threads:
@@ -140,3 +143,5 @@ logging:
     # org.hibernate.SQL: DEBUG
     # org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.flywaydb: INFO
+
+

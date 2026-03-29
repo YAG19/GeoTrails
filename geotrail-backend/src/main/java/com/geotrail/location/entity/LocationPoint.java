@@ -49,6 +49,12 @@ public class LocationPoint {
     @Builder.Default
     private String source = "live";
 
+    @Column(name = "activity_type", length = 50)
+    private String activityType;
+
+    @Column(name = "distance_meters")
+    private Double distanceMeters;
+
     /**
      * Store original payload as JSONB.
      *

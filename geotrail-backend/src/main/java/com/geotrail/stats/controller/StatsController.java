@@ -2,6 +2,7 @@ package com.geotrail.stats.controller;
 
 import com.geotrail.auth.entity.User;
 import com.geotrail.common.dto.ApiResponse;
+import com.geotrail.stats.dto.ActivityDistanceDto;
 import com.geotrail.stats.dto.DailyStatDto;
 import com.geotrail.stats.dto.DashboardSummaryDto;
 import com.geotrail.stats.service.StatsService;
@@ -35,5 +36,14 @@ public class StatsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
         return ResponseEntity.ok(ApiResponse.success(statsService.getDailyStats(user.getId(), from, to)));
+    }
+
+    @GetMapping("/activity-distances")
+    public ResponseEntity<ApiResponse<List<ActivityDistanceDto>>> getActivityDistances(
+            @AuthenticationPrincipal User user,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(statsService.getActivityDistances(user.getId(), from, to)));
     }
 }
