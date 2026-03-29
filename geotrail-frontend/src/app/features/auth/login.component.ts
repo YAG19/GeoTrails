@@ -176,7 +176,7 @@ export class LoginComponent {
     this.authService.login({ username: this.username, password: this.password }).subscribe({
       next: () => {
         this.loading.set(false);
-        this.router.navigate(['/map']);
+        this.router.navigate(['/app/map']);
       },
       error: (err) => {
         this.loading.set(false);

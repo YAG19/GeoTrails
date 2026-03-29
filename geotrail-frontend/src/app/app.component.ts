@@ -18,32 +18,32 @@ import { ThemeService } from './core/services/theme.service';
           </div>
           <ul class="nav-links">
             <li>
-              <a routerLink="/map" routerLinkActive="active">
+              <a routerLink="/app/map" routerLinkActive="active">
                 <span class="icon">🗺️</span> Map
               </a>
             </li>
             <li>
-              <a routerLink="/live" routerLinkActive="active">
+              <a routerLink="/app/live" routerLinkActive="active">
                 <span class="icon">📡</span> Live Tracking
               </a>
             </li>
             <li>
-              <a routerLink="/dashboard" routerLinkActive="active">
+              <a routerLink="/app/dashboard" routerLinkActive="active">
                 <span class="icon">📊</span> Dashboard
               </a>
             </li>
             <li>
-              <a routerLink="/import" routerLinkActive="active">
+              <a routerLink="/app/import" routerLinkActive="active">
                 <span class="icon">📥</span> Import
               </a>
             </li>
             <li>
-              <a routerLink="/places" routerLinkActive="active">
+              <a routerLink="/app/places" routerLinkActive="active">
                 <span class="icon">📍</span> Places
               </a>
             </li>
             <li>
-              <a routerLink="/settings" routerLinkActive="active">
+              <a routerLink="/app/settings" routerLinkActive="active">
                 <span class="icon">⚙️</span> Settings
               </a>
             </li>
