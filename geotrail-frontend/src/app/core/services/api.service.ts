@@ -12,6 +12,7 @@ import {
   ImportJob,
   DashboardSummary,
   DailyStat,
+  ActivityDistance,
   StatsSnapshot,
 } from '../models/api.models';
 
@@ -108,6 +109,13 @@ export class ApiService {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.http
       .get<ApiResponse<DailyStat[]>>(`${this.baseUrl}/stats/daily`, { params })
+      .pipe(map((res) => res.data));
+  }
+
+  getActivityDistances(from: string, to: string): Observable<ActivityDistance[]> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.http
+      .get<ApiResponse<ActivityDistance[]>>(`${this.baseUrl}/stats/activity-distances`, { params })
       .pipe(map((res) => res.data));
   }
 

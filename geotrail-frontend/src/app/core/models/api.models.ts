@@ -125,3 +125,8 @@ export interface DailyStat {
   timeAtHomeMin: number;
   timeInTransitMin: number;
 }
+
+export interface ActivityDistance {
+  activityType: string;
+  totalDistanceM: number;
+}

@@ -61,6 +61,13 @@ export const routes: Routes = [
             (m) => m.SettingsComponent,
           ),
       },
+      {
+        path: 'shared-data',
+        loadComponent: () =>
+          import('./features/rxjs-shared-data-example/shared-data-example.component').then(
+            (m) => m.SharedDataExampleComponent,
+          ),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

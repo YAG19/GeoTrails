@@ -110,7 +110,7 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   private pointsLayer = L.layerGroup();
   private routeLayer = L.layerGroup();
 
-  dateFrom = this.formatDate(new Date());
+  dateFrom = this.formatDate(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000));
   dateTo = this.formatDate(new Date());
   pointCount = signal(0);
   distanceKm = signal('0.0');
