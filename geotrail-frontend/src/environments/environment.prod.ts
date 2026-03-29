@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'RAILWAY_API_URL',
-  wsUrl: 'RAILWAY_WS_URL',
+  apiUrl: 'https://geotrails-production.up.railway.app/api',
+  wsUrl: 'wss://geotrails-production.up.railway.app/api/ws/tracking',
 };
