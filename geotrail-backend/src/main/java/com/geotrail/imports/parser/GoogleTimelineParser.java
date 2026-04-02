@@ -345,10 +345,10 @@ public class GoogleTimelineParser {
             }
         }
         // LOG POINTS
-        for (CreateRequest req : points) {
-                log.info("Parsed point: {} {} Activity: {}" , req.getLatitude(), req.getLongitude(), req.getActivityType());
-        }
-        log.info("Parsed {} points from segments ( errors)", points.size());
+        // for (CreateRequest req : points) {
+        //         log.info("Parsed point: {} {} Activity: {}" , req.getLatitude(), req.getLongitude(), req.getActivityType());
+        // }
+        // log.info("Parsed {} points from segments ( errors)", points.size());
         return points;
     }
 
