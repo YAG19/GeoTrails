@@ -291,7 +291,7 @@ import { RouterLink } from '@angular/router';
 
     /* ── Map mock ─────────────────────────────────────── */
     .hero-visual {
-      max-width: 800px;
+      max-width: 850px;
       margin: 0 auto;
       padding: 0 24px;
     }

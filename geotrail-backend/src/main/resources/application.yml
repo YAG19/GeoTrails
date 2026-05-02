@@ -17,7 +17,7 @@ spring:
 
   # --- Database ---
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://172.17.0.1/geotrail}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/geotrail}
     username: ${SPRING_DATASOURCE_USERNAME:geotrail}
     password: ${SPRING_DATASOURCE_PASSWORD:geotrail_dev}
     hikari:
@@ -45,7 +45,7 @@ spring:
   # --- Redis ---
   data:
     redis:
-      host: ${REDIS_HOST:172.17.0.1}
+      host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       timeout: 5000ms
 

@@ -124,11 +124,11 @@
         </dependency>
 
         <!-- ==================== UTILITIES ==================== -->
-        <dependency>
+        <!-- <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
             <version>${mapstruct.version}</version>
-        </dependency>
+        </dependency> -->
 
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -149,13 +149,6 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
 
-        <!-- ==================== DEV TOOLS ==================== -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-devtools</artifactId>
-            <scope>runtime</scope>
-            <optional>true</optional>
-        </dependency>
 
         <!-- ==================== TESTING ==================== -->
         <dependency>

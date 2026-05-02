@@ -250,7 +250,7 @@ public class GoogleTimelineParser {
         req.setLatitude(coords[0]);
         req.setLongitude(coords[1]);
         req.setRecordedAt(timestamp);
-        req.setSource("google_semantic_visit");
+        req.setSource("google_semantic");
         return req;
     }
 
@@ -589,7 +589,7 @@ public class GoogleTimelineParser {
         req.setLatitude(lat);
         req.setLongitude(lon);
         req.setRecordedAt(ts);
-        req.setSource("google_semantic_visit");
+        req.setSource("google_semantic");
         return req;
     }
 
