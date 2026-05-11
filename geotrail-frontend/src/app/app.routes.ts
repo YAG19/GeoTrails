@@ -3,7 +3,7 @@ import { authGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
   {
-    path: '',
+    path: 'landing',
     loadComponent: () =>
       import('./features/landing/landing.component').then((m) => m.LandingComponent),
   },
@@ -18,14 +18,10 @@ export const routes: Routes = [
       import('./features/auth/register.component').then((m) => m.RegisterComponent),
   },
   {
-    path: 'app',
+    path: '',
     canActivate: [authGuard],
     children: [
-      {
-        path: '',
-        redirectTo: 'map',
-        pathMatch: 'full',
-      },
+      { path: '', redirectTo: 'map', pathMatch: 'full' },
       {
         path: 'map',
         loadComponent: () =>
@@ -64,13 +60,6 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/settings/settings.component').then(
             (m) => m.SettingsComponent,
-          ),
-      },
-      {
-        path: 'shared-data',
-        loadComponent: () =>
-          import('./features/rxjs-shared-data-example/shared-data-example.component').then(
-            (m) => m.SharedDataExampleComponent,
           ),
       },
     ],
