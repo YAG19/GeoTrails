@@ -1,13 +1,13 @@
 import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LandingHeroComponent } from './landing-hero.component';
-import { LandingImportsComponent } from './landing-imports.component';
 import { LandingDemoComponent } from './landing-demo.component';
+import { LandingImportsComponent } from './landing-imports.component';
 
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, LandingHeroComponent, LandingImportsComponent, LandingDemoComponent],
+  imports: [CommonModule, LandingHeroComponent],
   template: `
     <div class="landing-root">
       <div class="topo-bg"></div>
@@ -54,19 +54,16 @@ import { LandingDemoComponent } from './landing-demo.component';
       <app-landing-hero></app-landing-hero>
 
       <!-- marquee -->
-      <div class="marquee">
+    <!--  <div class="marquee">
         <div class="marquee-track">
           @for (item of marqueeItems; track $index) {
             <span class="marquee-item"><span class="marquee-bullet">▸</span>{{ item }}</span>
           }
         </div>
-      </div>
-
-      <!-- imports -->
-      <app-landing-imports></app-landing-imports>
+      </div> -->
 
       <!-- demo -->
-      <app-landing-demo></app-landing-demo>
+      <!-- <app-landing-demo></app-landing-demo> -->
 
       <!-- footer -->
       <footer class="footer">

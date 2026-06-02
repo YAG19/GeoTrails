@@ -17,9 +17,9 @@ spring:
 
   # --- Database ---
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/geotrail}
-    username: ${SPRING_DATASOURCE_USERNAME:geotrail}
-    password: ${SPRING_DATASOURCE_PASSWORD:geotrail_dev}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:geotrail}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USERNAME:geotrail}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:geotrail_dev}}
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
@@ -76,6 +76,56 @@ minio:
   access-key: ${MINIO_ACCESS_KEY:minioadmin}
   secret-key: ${MINIO_SECRET_KEY:minioadmin}
   bucket-name: geotrail-imports
+
+# --- RAG (natural-language timeline query) ---
+# Fully local by default: LM Studio (OpenAI-compatible) handles BOTH embeddings and chat.
+# No API keys required. Anthropic key is only needed if you flip llm-provider to "claude".
+anthropic:
+  api:
+    key: ${ANTHROPIC_API_KEY:}
+
+gemini:
+  api:
+    key: AQ.Ab8RN6K9SLoNZRlPN_VDG9RTxm4fhovLcwqBsBYBqTabq7YU8A
+
+geotrail:
+  rag:
+    llm-provider: ${RAG_LLM_PROVIDER:gemini}   # which chat backend answers: "lmstudio" (local, default) | "claude" | "gemini"
+    # which model produces vectors (separate axis from llm-provider). "lmstudio" (local, default) | "gemini".
+    # Each provider writes/reads its OWN table, so switching does NOT require dropping existing vectors,
+    # but you must re-run /api/rag/embed to populate the new provider's table before querying with it.
+    embedding-provider: ${RAG_EMBEDDING_PROVIDER:gemini}
+    claude-model: ${CLAUDE_MODEL:claude-sonnet-4-20250514}
+    max-tokens: 1024
+    # Google Gemini API — chat when llm-provider=gemini, embeddings when embedding-provider=gemini.
+    # Requires GEMINI_API_KEY.
+    gemini:
+      base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+      model: ${GEMINI_MODEL:gemini-2.5-flash}              # chat model
+      embedding-model: ${GEMINI_EMBEDDING_MODEL:gemini-embedding-001}
+      embedding-dimensions: 768                            # must match the vector(768) column
+      embed-requests-per-minute: ${GEMINI_EMBED_RPM:90}    # client-side throttle; keep < your quota (100/min)
+      temperature: 0.2
+      max-tokens: 1024
+    # Local LM Studio OpenAI-compatible server — used for embeddings always,
+    # and for chat when llm-provider=lmstudio.
+    lmstudio:
+      base-url: ${LMSTUDIO_BASE_URL:http://100.94.33.101:1234}
+      model: ${LMSTUDIO_MODEL:local-model}                 # chat model id (LM Studio routes to loaded model)
+      embedding-model: ${LMSTUDIO_EMBEDDING_MODEL:text-embedding-nomic-embed-text-v1.5}  # 768-dim; matches V11
+      temperature: 0.2        # low = factual/grounded, less hallucination
+      max-tokens: 10024        # keep >=512: thinking models spend tokens reasoning first
+    top-k: 15                 # how many chunks to retrieve (a full day can be ~13 segments)
+    min-similarity: 0.4       # drop chunks below this cosine score (nomic-embed q<->stmt sits ~0.4-0.6)
+    max-context-chars: 3000   # cap context sent to the LLM
+    display-zone: Asia/Kolkata  # timezone used when wording summaries
+  # --- Reverse geocoding (Nominatim / OpenStreetMap) ---
+  geocode:
+    base-url: ${NOMINATIM_BASE_URL:https://nominatim.openstreetmap.org}
+    user-agent: ${NOMINATIM_USER_AGENT:GeoTrails/1.0 (starboyygg@gmail.com)}  # mandatory; OSM blocks default UAs
+    connect-timeout-ms: 5000
+    read-timeout-ms: 10000
+    min-interval-ms: 1100     # OSM policy: <=1 req/sec on the public server
 
 # --- Actuator ---
 management:
@@ -140,7 +190,7 @@ springdoc:
 logging:
   level:
     com.geotrail: DEBUG
-    # org.hibernate.SQL: DEBUG
+    org.hibernate.SQL: INFO
     # org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.flywaydb: INFO
 

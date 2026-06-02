@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
-import { Place } from '../../core/models/api.models';
+import { HeatmapCenter, Place } from '../../core/models/api.models';
 
 @Component({
   selector: 'app-places',
@@ -16,6 +16,24 @@ import { Place } from '../../core/models/api.models';
           {{ showForm() ? 'Cancel' : '+ Add Place' }}
         </button>
       </div>
+
+      @if (hotspot(); as h) {
+        @if (h.latitude != null && !hotspotDismissed()) {
+          <div class="hotspot-card">
+            <div class="hotspot-header">
+              <span class="hotspot-label">HOTSPOT SUGGESTION</span>
+              <span class="hotspot-pts">{{ h.pointCount | number }} points</span>
+              <button class="btn-dismiss" (click)="hotspotDismissed.set(true)">✕</button>
+            </div>
+            <div class="hotspot-coords">{{ h.latitude!.toFixed(4) }}°N &nbsp; {{ h.longitude!.toFixed(4) }}°E</div>
+            <div class="hotspot-save-row">
+              <input type="text" [(ngModel)]="hotspotName" placeholder="Name this place (e.g. Home, Work…)" class="hotspot-input" />
+              <input type="text" [(ngModel)]="hotspotCategory" placeholder="Category" class="hotspot-cat" />
+              <button class="btn-save" (click)="saveHotspot(h)" [disabled]="!hotspotName">Save as Place</button>
+            </div>
+          </div>
+        }
+      }
 
       @if (showForm()) {
         <div class="place-form">
@@ -59,6 +77,28 @@ import { Place } from '../../core/models/api.models';
     .page-title { margin: 0; font-size: 1.5rem; color: var(--text-primary); }
     .btn-add { padding: 8px 20px; background: #4fc3f7; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; }
     .btn-add:hover { background: #29b6f6; }
+
+    .hotspot-card {
+      background: #0d2a1a;
+      border: 1px solid #2e7d32;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+    .hotspot-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .hotspot-label { font-size: 0.75rem; font-weight: 700; color: #81c784; letter-spacing: 0.08em; }
+    .hotspot-pts { font-size: 0.8rem; color: #a5d6a7; margin-left: auto; }
+    .btn-dismiss { background: none; border: none; color: #4caf50; cursor: pointer; font-size: 0.9rem; padding: 0 4px; }
+    .hotspot-coords { font-family: monospace; font-size: 0.85rem; color: #69f0ae; margin-bottom: 12px; }
+    .hotspot-save-row { display: flex; gap: 8px; align-items: center; }
+    .hotspot-input { flex: 1; padding: 8px 12px; border: 1px solid #2e7d32; border-radius: 8px; background: #0a1f10; color: #c8e6c9; font-size: 0.9rem; }
+    .hotspot-cat { width: 130px; padding: 8px 12px; border: 1px solid #2e7d32; border-radius: 8px; background: #0a1f10; color: #c8e6c9; font-size: 0.9rem; }
+    .hotspot-input::placeholder, .hotspot-cat::placeholder { color: #4a7a50; }
 
     .place-form {
       background: var(--bg-card);
@@ -113,12 +153,38 @@ export class PlacesComponent implements OnInit {
   showForm = signal(false);
   newPlace = { name: '', latitude: 0, longitude: 0, radiusMeters: 100, category: '' };
 
+  hotspot = signal<HeatmapCenter | null>(null);
+  hotspotDismissed = signal(false);
+  hotspotName = '';
+  hotspotCategory = '';
+
   ngOnInit(): void {
     this.loadPlaces();
+    this.apiService.getHeatmapCenter().subscribe({
+      next: (h) => { if (h.latitude != null) this.hotspot.set(h); },
+    });
   }
 
   loadPlaces(): void {
     this.apiService.getPlaces().subscribe({ next: (p) => this.places.set(p) });
+  }
+
+  saveHotspot(h: HeatmapCenter): void {
+    if (!this.hotspotName || h.latitude == null || h.longitude == null) return;
+    this.apiService.createPlace({
+      name: this.hotspotName,
+      latitude: h.latitude,
+      longitude: h.longitude,
+      radiusMeters: 150,
+      category: this.hotspotCategory || undefined,
+    }).subscribe({
+      next: () => {
+        this.hotspotDismissed.set(true);
+        this.hotspotName = '';
+        this.hotspotCategory = '';
+        this.loadPlaces();
+      },
+    });
   }
 
   createPlace(): void {

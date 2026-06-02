@@ -1,8 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { filter, map, startWith } from 'rxjs';
+import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from './core/auth/auth.service';
 
 @Component({
@@ -10,25 +8,37 @@ import { AuthService } from './core/auth/auth.service';
   standalone: true,
   imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
   template: `
-    @if (authService.isAuthenticated() && !isPublicRoute()) {
+    @if (authService.isAuthenticated()) {
       <div class="app-layout">
         <nav class="sidebar">
+          <!-- logo -->
           <div class="sidebar-header">
-            <h1 class="logo">GeoTrail</h1>
-            <span class="username">{{ authService.username() }}</span>
+            <div class="logo-row">
+              <span class="logo-mark">◉</span>
+              <div>
+                <div class="logo-name">GEOTRAIL</div>
+                <div class="logo-sub">{{ authService.username() }}</div>
+              </div>
+            </div>
           </div>
+
+          <!-- nav -->
           <ul class="nav-links">
-            <li><a routerLink="/map" routerLinkActive="active"><span class="icon">🗺️</span> Map</a></li>
-            <li><a routerLink="/live" routerLinkActive="active"><span class="icon">📡</span> Live Tracking</a></li>
-            <li><a routerLink="/dashboard" routerLinkActive="active"><span class="icon">📊</span> Dashboard</a></li>
-            <li><a routerLink="/import" routerLinkActive="active"><span class="icon">📥</span> Import</a></li>
-            <li><a routerLink="/places" routerLinkActive="active"><span class="icon">📍</span> Places</a></li>
-            <li><a routerLink="/settings" routerLinkActive="active"><span class="icon">⚙️</span> Settings</a></li>
+            <!-- <li><a routerLink="/map"       routerLinkActive="active"><span class="nav-icon">◈</span> Map</a></li> -->
+            <!--  <li><a routerLink="/live"      routerLinkActive="active"><span class="nav-icon live-dot"></span> Live</a></li> -->
+            <li><a routerLink="/dashboard" routerLinkActive="active"><span class="nav-icon">◉</span> Dashboard</a></li>
+            <li><a routerLink="/import"    routerLinkActive="active"><span class="nav-icon">↓</span> Import</a></li>
+            <li><a routerLink="/places"    routerLinkActive="active"><span class="nav-icon">◆</span> Places</a></li>
+            <li><a routerLink="/assistant" routerLinkActive="active"><span class="nav-icon">💬</span> Assistant</a></li>
+            <li><a routerLink="/settings"  routerLinkActive="active"><span class="nav-icon">⚙</span> Settings</a></li>
           </ul>
+
           <div class="sidebar-footer">
-            <button class="logout-btn" (click)="authService.logout()">Logout</button>
+            <span class="conn-status">● connected</span>
+            <button class="logout-btn" (click)="authService.logout()">logout</button>
           </div>
         </nav>
+
         <main class="content">
           <router-outlet />
         </main>
@@ -39,32 +49,74 @@ import { AuthService } from './core/auth/auth.service';
   `,
   styles: [`
     .app-layout { display: flex; height: 100vh; overflow: hidden; }
-    .sidebar { width: 240px; background: #1a1a2e; color: #e0e0e0; display: flex; flex-direction: column; flex-shrink: 0; }
-    .sidebar-header { padding: 24px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-    .logo { font-size: 1.5rem; font-weight: 700; color: #4fc3f7; margin: 0 0 4px; }
-    .username { font-size: 0.85rem; color: #888; }
-    .nav-links { list-style: none; padding: 12px 0; margin: 0; flex: 1; }
-    .nav-links a { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #b0b0b0; text-decoration: none; font-size: 0.95rem; transition: all 0.2s; border-left: 3px solid transparent; }
-    .nav-links a:hover { background: rgba(79, 195, 247, 0.08); color: #fff; }
-    .nav-links a.active { background: rgba(79, 195, 247, 0.12); color: #4fc3f7; border-left-color: #4fc3f7; }
-    .icon { font-size: 1.1rem; width: 24px; text-align: center; }
-    .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
-    .logout-btn { width: 100%; padding: 10px; background: rgba(244, 67, 54, 0.15); color: #ef5350; border: 1px solid rgba(244, 67, 54, 0.3); border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
-    .logout-btn:hover { background: rgba(244, 67, 54, 0.25); }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px; flex-shrink: 0;
+      background: #0d0d0d;
+      border-right: 1px solid #242424;
+      display: flex; flex-direction: column;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+    }
+    .sidebar-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid #242424;
+    }
+    .logo-row { display: flex; align-items: center; gap: 10px; }
+    .logo-mark {
+      width: 22px; height: 22px;
+      border: 1.5px solid #ff5a36;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; color: #ff5a36; font-weight: 700; flex-shrink: 0;
+    }
+    .logo-name { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; color: #ededea; line-height: 1.1; }
+    .logo-sub  { font-size: 9.5px; color: #5a5550; }
+
+    .nav-links {
+      list-style: none; padding: 12px 0; margin: 0; flex: 1; overflow: auto;
+    }
+    .nav-links a {
+      display: flex; align-items: center; gap: 12px;
+      padding: 9px 18px;
+      color: #8a847b; text-decoration: none;
+      font-size: 12.5px;
+      border-left: 2px solid transparent;
+      transition: background 120ms, color 120ms;
+    }
+    .nav-links a:hover { background: rgba(255,90,54,0.06); color: #c9c5be; }
+    .nav-links a.active {
+      background: rgba(255,90,54,0.10);
+      color: #ededea;
+      border-left-color: #ff5a36;
+    }
+    .nav-icon { width: 14px; text-align: center; font-size: 12px; }
+    .live-dot {
+      display: inline-block;
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #ff5a36;
+      animation: gt-pulse-dot 1.6s infinite;
+    }
+
+    .sidebar-footer {
+      padding: 12px 18px;
+      border-top: 1px solid #242424;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 10px;
+    }
+    .conn-status { color: #5a5550; }
+    .logout-btn {
+      background: transparent;
+      border: 1px solid #3a3a3a;
+      color: #8a847b;
+      font-family: inherit; font-size: 10px;
+      padding: 4px 10px; cursor: pointer;
+    }
+    .logout-btn:hover { border-color: #ff5a36; color: #ff5a36; }
+
+    /* ── Main content ── */
     .content { flex: 1; overflow: auto; background: #f5f5f5; }
   `],
 })
 export class AppComponent {
   authService = inject(AuthService);
-  private router = inject(Router);
-
-  // True for routes that should render without the authenticated sidebar.
-  isPublicRoute = toSignal(
-    this.router.events.pipe(
-      filter((e) => e instanceof NavigationEnd),
-      map((e: any) => e.urlAfterRedirects.startsWith('/landing')),
-      startWith(this.router.url.startsWith('/landing')),
-    ),
-    { initialValue: false },
-  );
 }

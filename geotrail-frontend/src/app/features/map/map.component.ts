@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal, AfterViewInit } from '@angular/core';
+import { Component, OnDestroy, inject, signal, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
@@ -116,18 +116,30 @@ export class MapComponent implements AfterViewInit, OnDestroy {
   distanceKm = signal('0.0');
 
   ngAfterViewInit(): void {
-    this.initMap();
-    this.loadPoints();
+    this.apiService.getHeatmapCenter().subscribe({
+      next: (center) => {
+        const hasData = center.latitude != null && center.longitude != null;
+        this.initMap(
+          hasData ? [center.latitude!, center.longitude!] : [20, 0],
+          hasData ? 13 : 3,
+        );
+        this.loadPoints();
+      },
+      error: () => {
+        this.initMap([20, 0], 3);
+        this.loadPoints();
+      },
+    });
   }
 
   ngOnDestroy(): void {
     this.map?.remove();
   }
 
-  private initMap(): void {
+  private initMap(center: [number, number], zoom: number): void {
     this.map = L.map('map', {
-      center: [20, 0],
-      zoom: 3,
+      center,
+      zoom,
       zoomControl: true,
     });
 

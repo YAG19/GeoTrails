@@ -1,5 +1,6 @@
 package com.geotrail.location.repository;
 
+import com.geotrail.common.dto.ApiResponse;
 import com.geotrail.location.entity.LocationPoint;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,7 +10,10 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface LocationPointRepository extends JpaRepository<LocationPoint, Long> {
@@ -118,6 +122,53 @@ public interface LocationPointRepository extends JpaRepository<LocationPoint, Lo
     );
 
     /**
+     * Find the centroid of the densest ~1m grid cell across all of the user's location history.
+     * Returns [lat, lng, pointCount], or [null, null, 0] if no data exists.
+     */
+    @Query(value = """
+        WITH dense_area AS (
+            SELECT
+                ROUND(ST_Y(coordinates)::numeric, 5) AS lat_bucket,
+                ROUND(ST_X(coordinates)::numeric, 5) AS lng_bucket
+            FROM location_points
+            WHERE user_id = :userId
+            GROUP BY lat_bucket, lng_bucket
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+        )
+        SELECT
+            ST_Y(ST_Centroid(ST_Collect(lp.coordinates))) AS lat,
+            ST_X(ST_Centroid(ST_Collect(lp.coordinates))) AS lng,
+            COUNT(*) AS point_count
+        FROM location_points lp, dense_area d
+        WHERE lp.user_id = :userId
+          AND ROUND(ST_Y(lp.coordinates)::numeric, 5) = d.lat_bucket
+          AND ROUND(ST_X(lp.coordinates)::numeric, 5) = d.lng_bucket
+        """, nativeQuery = true)
+    Object[] findHeatmapCenter(@Param("userId") Long userId);
+
+    /**
+     * Compute all density grid buckets for a user — used to populate heatmap_tiles.
+     * Returns rows of [lat_bucket, lng_bucket, point_count], ordered by density descending.
+     * Buckets with fewer than minCount points are excluded.
+     */
+    @Query(value = """
+        SELECT
+            ROUND(ST_Y(coordinates)::numeric, 5) AS lat_bucket,
+            ROUND(ST_X(coordinates)::numeric, 5) AS lng_bucket,
+            CAST(COUNT(*) AS INTEGER) AS point_count
+        FROM location_points
+        WHERE user_id = :userId
+        GROUP BY lat_bucket, lng_bucket
+        HAVING COUNT(*) >= :minCount
+        ORDER BY point_count DESC
+        """, nativeQuery = true)
+    List<Object[]> computeHeatmapBuckets(
+            @Param("userId") Long userId,
+            @Param("minCount") int minCount
+    );
+
+    /**
      * Sum distance_meters per activity_type within a date range.
      * Only rows with a non-null, positive distance_meters value are included
      * (live-tracking points have null; only imported activity start-points carry this value).
@@ -139,4 +190,15 @@ public interface LocationPointRepository extends JpaRepository<LocationPoint, Lo
             @Param("from") Instant from,
             @Param("to") Instant to
     );
+
+    @Query(value = "SELECT MIN(recorded_at)::date FROM location_points WHERE user_id = :userId", nativeQuery = true)
+    Optional<LocalDate> findEarliestDateByUserId(@Param("userId") Long userId);
+
+    @Query(value = "SELECT MAX(recorded_at)::date FROM location_points WHERE user_id = :userId", nativeQuery = true)
+    Optional<LocalDate> findLatestDateByUserId(@Param("userId") Long userId);
+
+    @Query(value = "SELECT DISTINCT activity_type FROM location_points " +
+            "WHERE user_id = :userId AND activity_type IS NOT NULL " +
+            "ORDER BY activity_type", nativeQuery = true)
+    List<String> findDistinctActivityTypeByUserId(@Param("userId") Long userId);
 }

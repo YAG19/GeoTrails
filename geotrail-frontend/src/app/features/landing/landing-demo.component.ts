@@ -8,9 +8,9 @@ import * as L from 'leaflet';
   imports: [CommonModule],
   template: `
     <section class="demo" data-screen-label="04 Demo">
-      <div class="container">
+   <div class="container">
         <div class="section-header-grid">
-          <div class="label section-header-tag">§ 03 / dashboard</div>
+          <div class="label section-header-stag">§ 03 / dashboard</div>
           <div>
             <h2 class="display section-header-title">Five years <em>of you, queryable.</em></h2>
             <p class="section-header-sub">
@@ -105,7 +105,7 @@ import * as L from 'leaflet';
             </div>
           </div>
         </div>
-      </div>
+      </div> 
     </section>
   `,
   styleUrls: ['./landing-shared.scss'],

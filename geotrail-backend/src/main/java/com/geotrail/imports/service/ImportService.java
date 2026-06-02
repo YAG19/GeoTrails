@@ -8,6 +8,8 @@ import com.geotrail.imports.parser.GoogleTimelineParser.ParseResult;
 import com.geotrail.imports.repository.ImportJobRepository;
 import com.geotrail.location.dto.LocationDtos.CreateRequest;
 import com.geotrail.location.service.LocationService;
+import com.geotrail.stats.service.StatsService;
+import com.geotrail.stats.service.StatusProcessBatch;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -28,6 +30,9 @@ public class ImportService {
     private final ImportJobRepository importJobRepo;
     private final GoogleTimelineParser googleParser;
     private final LocationService locationService;
+    private final SemanticImportService semanticImportService;
+//    private final StatsService statsService;
+//    private final StatusProcessBatch statusProcessBatch;
 
     /**
      * Start a Google Timeline import.
@@ -47,7 +52,8 @@ public class ImportService {
 
         // Kick off async processing
         processImportAsync(job.getId(), user, file);
-
+        //Start dailyStatGeneration
+//        statsService.computeStatsForDate(job.getId(),LocalDate.now().minusDays(1));
         return job;
     }
 
@@ -119,6 +125,16 @@ public class ImportService {
                 }
             }
 
+            // Persist the rich semantic records (visits / activities / raw breadcrumbs)
+            // that don't fit the flat location_points model.
+            try {
+                semanticImportService.persistVisits(user, result.visits());
+                semanticImportService.persistActivities(user, result.activities());
+                semanticImportService.persistTimelinePaths(user, result.timelinePaths());
+            } catch (Exception e) {
+                log.error("Failed to persist semantic records for import job {}: {}", jobId, e.getMessage());
+            }
+
             job.setStatus(ImportStatus.COMPLETED);
             job.setProcessed(totalProcessed);
             job.setErrors(totalErrors + result.errors());
@@ -127,6 +143,14 @@ public class ImportService {
 
             log.info("Import job {} completed: {} points inserted, {} errors",
                     jobId, totalProcessed, job.getErrors());
+
+            // Refresh heatmap tiles so the new data is reflected immediately
+            try {
+                locationService.refreshHeatmapTiles(user.getId());
+//                statusProcessBatch.processDailyStat(user.getId());
+            } catch (Exception e) {
+                log.info("Heatmap refresh after import failed for user {}: {}", user.getId(), e.getMessage());
+            }
 
         } catch (Exception e) {
             log.error("Import job {} failed", jobId, e);
@@ -138,9 +162,7 @@ public class ImportService {
     }
 
     public ImportJob retryForUserId(Long id) {
-        ImportJob job = importJobRepo.findById(id).orElse(null);
-        if (job == null) return null;
-        
-        return job;
+        return importJobRepo.findById(id).orElse(null);
     }
+
 }

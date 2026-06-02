@@ -3,7 +3,7 @@ services:
   frontend:
     build: ./geotrail-frontend
     ports:
-      - "80:80"
+      - "4200:80"
     depends_on:
       - backend
     restart: unless-stopped
@@ -24,7 +24,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-geotrail_dev}
       REDIS_HOST: redis
       MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin} 
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production-must-be-256-bits-long-at-minimum}
     depends_on:
@@ -37,10 +37,13 @@ services:
       - geotrail
 
   # ==================== DATABASE ====================
+  # PostGIS + pgvector. The stock postgis/postgis image has no pgvector, which the
+  # RAG feature (timeline_embeddings) requires, so we build a thin image that adds it.
   postgres:
-    image: postgis/postgis:16-3.4
+    build: ./geotrail-backend/docker/postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./geotrail-backend/docker/postgres/init:/docker-entrypoint-initdb.d:ro
     environment:
       POSTGRES_DB: geotrail
       POSTGRES_USER: geotrail
@@ -68,9 +71,37 @@ services:
     networks:
       - geotrail
 
+  # ==================== MONITORING ====================
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - geotrail
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafanadata:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - geotrail
+
 volumes:
   pgdata:
   redisdata:
+  grafanadata:
 
 networks:
   geotrail:

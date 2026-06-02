@@ -25,19 +25,26 @@ public class StatsService {
     private final DailyStatRepository dailyStatRepo;
     private final LocationPointRepository locationRepo;
 
-    @Cacheable(value = "dashboardSummary", key = "#userId")
+//    @Cacheable(value = "dashboardSummary", key = "#userId")
     @Transactional(readOnly = true)
     public DashboardSummaryDto getDashboardSummary(Long userId) {
-        LocalDate today = LocalDate.now();
-        LocalDate thirtyDaysAgo = today.minusDays(30);
-        LocalDate yearStart = today.withDayOfYear(1);
+        return getDashboardSummary(userId, null, null, null);
+    }
 
-        // Last 30 days
+    @Transactional(readOnly = true)
+    public DashboardSummaryDto getDashboardSummary(Long userId, LocalDate from, LocalDate to, Integer currentYear) {
+        LocalDate today = to != null ? to : LocalDate.now();
+        LocalDate thirtyDaysAgo = from != null ? from : today.minusDays(30);
+
+        LocalDate yearStart = currentYear != null ? LocalDate.of(currentYear, 1, 1) : today.withDayOfYear(1);
+        LocalDate yearEnd = currentYear != null ? LocalDate.of(currentYear, 12, 31) : today;
+
+        // Last 30 days (or scoped range)
         double distance30d = dailyStatRepo.sumDistanceForRange(userId, thirtyDaysAgo, today);
         long points30d = dailyStatRepo.sumPointsForRange(userId, thirtyDaysAgo, today);
 
-        // This year
-        double distanceYear = dailyStatRepo.sumDistanceForRange(userId, yearStart, today);
+        // This year (or currentYear range)
+        double distanceYear = dailyStatRepo.sumDistanceForRange(userId, yearStart, yearEnd);
 
         // All time point count
         long totalPoints = locationRepo.countByUserAndTimeRange(
@@ -103,7 +110,7 @@ public class StatsService {
         }
 
         dailyStatRepo.save(stat);
-        log.debug("Computed stats for user {} on {}: {} points, {:.0f}m", userId, date, pointCount, distance);
+        log.info("Computed stats for user {} on {}: {} points, {}m", userId, date, pointCount, distance);
     }
 
     private DailyStatDto toDto(DailyStat stat) {

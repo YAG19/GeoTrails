@@ -1,8 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -13,6 +14,10 @@ import { AuthService } from '../../core/auth/auth.service';
       <div class="auth-card">
         <h1 class="auth-title">GeoTrail</h1>
         <p class="auth-subtitle">Your Private Location History</p>
+
+        @if (devMode) {
+          <div class="dev-banner">Dev mode — logging in as <strong>developer</strong></div>
+        }
 
         @if (error()) {
           <div class="error-msg">{{ error() }}</div>
@@ -135,6 +140,19 @@ import { AuthService } from '../../core/auth/auth.service';
       cursor: not-allowed;
     }
 
+    .dev-banner {
+      background: #1a3a1a;
+      color: #81c784;
+      border: 1px solid #2e7d32;
+      padding: 10px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    .dev-banner strong { color: #a5d6a7; }
+
     .error-msg {
       background: var(--danger-bg);
       color: var(--danger-text);
@@ -158,14 +176,24 @@ import { AuthService } from '../../core/auth/auth.service';
     }
   `],
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
+
+  readonly devMode = environment.devMode;
 
   username = '';
   password = '';
   loading = signal(false);
   error = signal<string | null>(null);
+
+  ngOnInit(): void {
+    if (environment.devMode) {
+      this.username = 'developer';
+      this.password = 'password';
+      this.onLogin();
+    }
+  }
 
   onLogin(): void {
     if (!this.username || !this.password) return;
@@ -176,7 +204,7 @@ export class LoginComponent {
     this.authService.login({ username: this.username, password: this.password }).subscribe({
       next: () => {
         this.loading.set(false);
-        this.router.navigate(['/app/map']);
+        this.router.navigate(['/map']);
       },
       error: (err) => {
         this.loading.set(false);

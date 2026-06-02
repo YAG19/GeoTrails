@@ -21,19 +21,19 @@ export const routes: Routes = [
     path: '',
     canActivate: [authGuard],
     children: [
-      { path: '', redirectTo: 'map', pathMatch: 'full' },
-      {
-        path: 'map',
-        loadComponent: () =>
-          import('./features/map/map.component').then((m) => m.MapComponent),
-      },
-      {
-        path: 'live',
-        loadComponent: () =>
-          import('./features/live-tracking/live-tracking.component').then(
-            (m) => m.LiveTrackingComponent,
-          ),
-      },
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      // {
+      //   path: 'map',
+      //   loadComponent: () =>
+      //     import('./features/map/map.component').then((m) => m.MapComponent),
+      // },
+      // {
+      //   path: 'live',
+      //   loadComponent: () =>
+      //     import('./features/live-tracking/live-tracking.component').then(
+      //       (m) => m.LiveTrackingComponent,
+      //     ),
+      // },
       {
         path: 'dashboard',
         loadComponent: () =>
@@ -53,6 +53,20 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/places/places.component').then(
             (m) => m.PlacesComponent,
+          ),
+      },
+      {
+        path: 'shared-data',
+        loadComponent: () =>
+          import('./features/rxjs-shared-data-example/shared-data-example.component').then(
+            (m) => m.SharedDataExampleComponent,
+          ),
+      },
+      {
+        path: 'assistant',
+        loadComponent: () =>
+          import('./features/assistant/assistant.component').then(
+            (m) => m.AssistantComponent,
           ),
       },
       {

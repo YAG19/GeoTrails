@@ -23,7 +23,7 @@ public class PlaceService {
 
     private final PlaceRepository placeRepo;
 
-    @Cacheable(value = "userPlaces", key = "#userId")
+//    @Cacheable(value = "userPlaces", key = "#userId")
     @Transactional(readOnly = true)
     public List<Response> getPlacesForUser(Long userId) {
         return placeRepo.findByUserIdOrderByNameAsc(userId)

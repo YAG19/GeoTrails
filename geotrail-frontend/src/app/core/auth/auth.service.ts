@@ -18,7 +18,6 @@ const USER_KEY = 'geotrail_username';
 export class AuthService {
   private readonly apiUrl = `${environment.apiUrl}/auth`;
 
-  // Signals for reactive auth state
   private _username = signal<string | null>(this.getStoredUsername());
   private _isAuthenticated = signal<boolean>(this.hasValidToken());
 

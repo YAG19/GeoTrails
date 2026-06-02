@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 public final class LocationDtos {
@@ -74,5 +75,23 @@ public final class LocationDtos {
         private double totalDistanceMeters;
         private Instant earliestPoint;
         private Instant latestPoint;
+    }
+
+    @Data
+    @Builder
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class HeatmapCenter {
+        private BigDecimal latitude;
+        private BigDecimal longitude;
+        private Long pointCount;
+    }
+
+    @Data
+    @Builder
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class HeatmapTileDto {
+        private BigDecimal lat;
+        private BigDecimal lng;
+        private Integer pointCount;
     }
 }

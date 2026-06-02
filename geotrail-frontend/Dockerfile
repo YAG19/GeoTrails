@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npm run build:prod
+RUN npm run build:docker
 
 # ==================== RUNTIME STAGE ====================
 FROM nginx:alpine
@@ -18,4 +18,4 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;", "--host=0.0.0.0"]
+CMD ["nginx", "-g", "daemon off;"]

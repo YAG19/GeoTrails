@@ -14,6 +14,12 @@ import {
   DailyStat,
   ActivityDistance,
   StatsSnapshot,
+  HeatmapCenter,
+  HeatmapTileItem,
+  RagQueryRequest,
+  RagQueryResponse,
+  RagEmbedRequest,
+  RagEmbedResponse,
 } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -21,6 +27,23 @@ export class ApiService {
   private readonly baseUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
+
+  // ==================== RAG / AI Assistant ====================
+
+  getLMSModels(url: string): Observable<any> {
+    const cleanUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
+    return this.http.get<any>(`${cleanUrl}/v1/models`);
+  }
+
+  queryRag(request: RagQueryRequest): Observable<RagQueryResponse> {
+    return this.http
+      .post<RagQueryResponse>(`${this.baseUrl}/rag/query`, request);
+  }
+
+  triggerRagEmbedding(request: RagEmbedRequest): Observable<RagEmbedResponse> {
+    return this.http
+      .post<RagEmbedResponse>(`${this.baseUrl}/rag/embed`, request);
+  }
 
   // ==================== Locations ====================
 
@@ -49,6 +72,25 @@ export class ApiService {
     return this.http
       .get<ApiResponse<StatsSnapshot>>(`${this.baseUrl}/locations/stats`, { params })
       .pipe(map((res) => res.data));
+  }
+
+  getHeatmapCenter(): Observable<HeatmapCenter> {
+    return this.http
+      .get<ApiResponse<HeatmapCenter>>(`${this.baseUrl}/locations/heatmap-center`)
+      .pipe(map((res) => res.data));
+  }
+
+  getHeatmapTiles(): Observable<HeatmapTileItem[]> {
+    return this.http
+      .get<ApiResponse<HeatmapTileItem[]>>(`${this.baseUrl}/locations/heatmap-tiles`)
+      .pipe(map((res) => res.data));
+  }
+
+  
+  // ==================== Activity ====================
+  getDistinctAtctivity(): Observable<string[]> {
+    return this.http
+      .get<string[]>(`${this.baseUrl}/locations/activity-type`)
   }
 
   // ==================== Places ====================
@@ -99,13 +141,18 @@ export class ApiService {
 
   // ==================== Stats ====================
 
-  getDashboardSummary(): Observable<DashboardSummary> {
+  getDashboardSummary(from?: string, to?: string, currentYear?: number): Observable<DashboardSummary> {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    if (currentYear != null) params = params.set('currentYear', currentYear.toString());
+
     return this.http
-      .get<ApiResponse<DashboardSummary>>(`${this.baseUrl}/stats/dashboard`)
+      .get<ApiResponse<DashboardSummary>>(`${this.baseUrl}/stats/dashboard`, { params })
       .pipe(map((res) => res.data));
   }
 
-  getDailyStats(from: string, to: string): Observable<DailyStat[]> {
+getDailyStats(from: string, to: string): Observable<DailyStat[]> {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.http
       .get<ApiResponse<DailyStat[]>>(`${this.baseUrl}/stats/daily`, { params })

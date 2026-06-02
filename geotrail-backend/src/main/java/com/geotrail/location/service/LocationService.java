@@ -1,9 +1,12 @@
 package com.geotrail.location.service;
 
 import com.geotrail.auth.entity.User;
+import com.geotrail.common.dto.ApiResponse;
 import com.geotrail.common.util.GeoUtils;
 import com.geotrail.location.dto.LocationDtos.*;
+import com.geotrail.location.entity.HeatmapTile;
 import com.geotrail.location.entity.LocationPoint;
+import com.geotrail.location.repository.HeatmapTileRepository;
 import com.geotrail.location.repository.LocationPointRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,12 +16,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +31,7 @@ import java.util.List;
 public class LocationService {
 
     private final LocationPointRepository locationRepo;
+    private final HeatmapTileRepository heatmapTileRepo;
     private final JdbcTemplate jdbcTemplate;
 
     @Transactional
@@ -87,6 +93,53 @@ public class LocationService {
     @Transactional(readOnly = true)
     public long getPointCount(Long userId, Instant from, Instant to) {
         return locationRepo.countByUserAndTimeRange(userId, from, to);
+    }
+
+    @Transactional(readOnly = true)
+    public HeatmapCenter getHeatmapCenter(Long userId) {
+        return heatmapTileRepo.findTopByUserIdOrderByPointCountDesc(userId)
+                .map(t -> HeatmapCenter.builder()
+                        .latitude(t.getLatBucket())
+                        .longitude(t.getLngBucket())
+                        .pointCount(t.getPointCount().longValue())
+                        .build())
+                .orElseGet(() -> HeatmapCenter.builder().pointCount(0L).build());
+    }
+
+    @Transactional(readOnly = true)
+    public List<HeatmapTileDto> getHeatmapTiles(Long userId) {
+        return heatmapTileRepo.findByUserIdOrderByPointCountDesc(userId).stream()
+                .limit(100)
+                .map(t -> HeatmapTileDto.builder()
+                        .lat(t.getLatBucket())
+                        .lng(t.getLngBucket())
+                        .pointCount(t.getPointCount())
+                        .build())
+                .toList();
+    }
+
+    @Transactional
+    public void refreshHeatmapTiles(Long userId) {
+        heatmapTileRepo.deleteByUserId(userId);
+
+        List<Object[]> buckets = locationRepo.computeHeatmapBuckets(userId, 3);
+        if (buckets.isEmpty()) return;
+
+        User userRef = new User();
+        userRef.setId(userId);
+
+        List<HeatmapTile> tiles = buckets.stream()
+                .map(row -> HeatmapTile.builder()
+                        .user(userRef)
+                        .latBucket(new BigDecimal(row[0].toString()))
+                        .lngBucket(new BigDecimal(row[1].toString()))
+                        .pointCount(((Number) row[2]).intValue())
+                        .computedAt(Instant.now())
+                        .build())
+                .toList();
+
+        heatmapTileRepo.saveAll(tiles);
+        log.info("Refreshed {} heatmap tiles for user {}", tiles.size(), userId);
     }
 
     // --- Batch insert for imports ---
@@ -209,5 +262,9 @@ public class LocationService {
 
     private Instant resolveTo(Instant to) {
         return to != null ? to : Instant.now();
+    }
+
+    public List<String> getDistinctActivityType(Long id) {
+        return locationRepo.findDistinctActivityTypeByUserId(id);
     }
 }

@@ -5,6 +5,9 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.geotrail.imports.dto.SemanticDtos.ParsedActivity;
+import com.geotrail.imports.dto.SemanticDtos.ParsedTimelinePath;
+import com.geotrail.imports.dto.SemanticDtos.ParsedVisit;
 import com.geotrail.location.dto.LocationDtos.CreateRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -143,6 +146,9 @@ public class GoogleTimelineParser {
      */
     private ParseResult parseSemanticSegments(JsonNode root) {
         List<CreateRequest> points = new ArrayList<>();
+        List<ParsedVisit> visits = new ArrayList<>();
+        List<ParsedActivity> activities = new ArrayList<>();
+        List<ParsedTimelinePath> timelinePaths = new ArrayList<>();
         int totalSegments = 0;
         int errors = 0;
 
@@ -156,14 +162,22 @@ public class GoogleTimelineParser {
 
         for (JsonNode segment : segments) {
             try {
+                Instant segmentStart = parseTimestamp(segment.path("startTime").asText(null));
+
                 // === TIMELINE PATH (movement points) ===
                 if (segment.has("timelinePath")) {
                     JsonNode path = segment.get("timelinePath");
                     if (path.isArray()) {
                         for (JsonNode waypoint : path) {
+                            // Flat point for the map / heatmap
                             CreateRequest point = parseTimelinePathPoint(waypoint);
                             if (point != null) {
                                 points.add(point);
+                            }
+                            // Raw breadcrumb for the timeline_paths table
+                            ParsedTimelinePath crumb = parseTimelinePathCrumb(waypoint, segmentStart);
+                            if (crumb != null) {
+                                timelinePaths.add(crumb);
                             }
                         }
                     }
@@ -175,15 +189,22 @@ public class GoogleTimelineParser {
                     if (point != null) {
                         points.add(point);
                     }
+                    ParsedVisit visit = extractVisit(segment);
+                    if (visit != null) {
+                        visits.add(visit);
+                    }
                 }
 
                 // === ACTIVITY (transport between places) ===
                 if (segment.has("activity")) {
                     List<CreateRequest> activityPoints = parseActivitySegment(segment);
                     points.addAll(activityPoints);
-                }
 
-         
+                    ParsedActivity activity = extractActivity(segment);
+                    if (activity != null) {
+                        activities.add(activity);
+                    }
+                }
 
             } catch (Exception e) {
                 errors++;
@@ -199,8 +220,92 @@ public class GoogleTimelineParser {
             log.info("Extracted {} additional points from rawSignals", rawCount);
         }
 
-        log.info("Parsed {} points from {} segments ({} errors)", points.size(), totalSegments, errors);
-        return new ParseResult(points, totalSegments, errors, null);
+        log.info("Parsed {} points, {} visits, {} activities, {} path crumbs from {} segments ({} errors)",
+                points.size(), visits.size(), activities.size(), timelinePaths.size(), totalSegments, errors);
+        return new ParseResult(points, visits, activities, timelinePaths, totalSegments, errors, null);
+    }
+
+    /**
+     * Extract a raw breadcrumb from a timelinePath waypoint for the timeline_paths table.
+     * { "point": "13.0286824°, 77.6655964°", "time": "2025-09-22T17:33:00.000+05:30" }
+     */
+    private ParsedTimelinePath parseTimelinePathCrumb(JsonNode node, Instant segmentStart) {
+        double[] coords = parseDegreeString(node.path("point").asText(null));
+        Instant recordedAt = parseTimestamp(node.path("time").asText(null));
+        if (coords == null || recordedAt == null) return null;
+        return new ParsedTimelinePath(coords[0], coords[1], segmentStart, recordedAt);
+    }
+
+    /**
+     * Extract the rich visit record (placeId, semantic type, probability, location, times).
+     */
+    private ParsedVisit extractVisit(JsonNode segment) {
+        JsonNode visit = segment.get("visit");
+        JsonNode topCandidate = visit.path("topCandidate");
+
+        String googlePlaceId = textOrNull(topCandidate.path("placeId"));
+        String semanticType = firstText(topCandidate.path("semanticType"), visit.path("semanticType"));
+        Double probability = firstDouble(visit.path("probability"), topCandidate.path("probability"));
+
+        double[] coords = parseDegreeString(topCandidate.path("placeLocation").path("latLng").asText(null));
+        Double lat = coords != null ? coords[0] : null;
+        Double lng = coords != null ? coords[1] : null;
+
+        Instant startTime = parseTimestamp(segment.path("startTime").asText(null));
+        Instant endTime = parseTimestamp(segment.path("endTime").asText(null));
+
+        // A visit needs a start time and a location (center_point is NOT NULL).
+        if (startTime == null || lat == null) return null;
+
+        return new ParsedVisit(googlePlaceId, semanticType, lat, lng, probability, startTime, endTime);
+    }
+
+    /**
+     * Extract the rich activity record (type, start/end coords, distance, probability, times).
+     */
+    private ParsedActivity extractActivity(JsonNode segment) {
+        JsonNode activity = segment.get("activity");
+        JsonNode topCandidate = activity.path("topCandidate");
+
+        String activityType = textOrNull(topCandidate.path("type"));
+        Double probability = firstDouble(activity.path("probability"), topCandidate.path("probability"));
+        Double distanceMeters = activity.has("distanceMeters") ? activity.get("distanceMeters").asDouble() : null;
+
+        double[] start = parseAnyCoordFormat(extractCoordString(activity.path("start")));
+        double[] end = parseAnyCoordFormat(extractCoordString(activity.path("end")));
+
+        Instant startTime = parseTimestamp(segment.path("startTime").asText(null));
+        Instant endTime = parseTimestamp(segment.path("endTime").asText(null));
+
+        if (startTime == null) return null;
+
+        return new ParsedActivity(
+                activityType,
+                start != null ? start[0] : null,
+                start != null ? start[1] : null,
+                end != null ? end[0] : null,
+                end != null ? end[1] : null,
+                distanceMeters,
+                probability,
+                startTime,
+                endTime
+        );
+    }
+
+    private String textOrNull(JsonNode node) {
+        String v = node.asText(null);
+        return (v == null || v.isBlank()) ? null : v;
+    }
+
+    private String firstText(JsonNode a, JsonNode b) {
+        String v = textOrNull(a);
+        return v != null ? v : textOrNull(b);
+    }
+
+    private Double firstDouble(JsonNode a, JsonNode b) {
+        if (a != null && a.isNumber()) return a.asDouble();
+        if (b != null && b.isNumber()) return b.asDouble();
+        return null;
     }
 
     /**
@@ -760,10 +865,18 @@ public class GoogleTimelineParser {
 
     public record ParseResult(
             List<CreateRequest> points,
+            List<ParsedVisit> visits,
+            List<ParsedActivity> activities,
+            List<ParsedTimelinePath> timelinePaths,
             int totalRecords,
             int errors,
             String errorMessage
     ) {
+        /** Backwards-compatible constructor for formats that only yield flat points. */
+        public ParseResult(List<CreateRequest> points, int totalRecords, int errors, String errorMessage) {
+            this(points, List.of(), List.of(), List.of(), totalRecords, errors, errorMessage);
+        }
+
         public boolean hasError() {
             return errorMessage != null;
         }

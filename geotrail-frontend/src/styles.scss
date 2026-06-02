@@ -16,18 +16,10 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+a { color: inherit; text-decoration: none; }
 
 /* ==================== LEAFLET FIX ==================== */
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-}
-
+.leaflet-container { width: 100%; height: 100%; z-index: 1; }
 .leaflet-default-icon-path {
   background-image: url(https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png);
 }
@@ -38,79 +30,78 @@ a {
 ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #aaa; }
 
-/* ==================== LANDING THEME TOKENS ==================== */
-/* These apply only when <body data-theme="..."> is set by the landing page. */
+/* ==================== GEOTRAIL THEME TOKENS ====================
+   Applied when body carries data-theme="dark" or data-theme="light".
+   DashboardComponent sets this on ngOnInit and clears it on ngOnDestroy,
+   so it does not affect other routes.
+   ================================================================ */
 body[data-theme] {
-  /* dark (default) */
-  --bg: #0d0d0d;
-  --bg-2: #131313;
-  --panel: #161616;
-  --line: #242424;
-  --line-2: #1c1c1c;
-  --ink: #ededea;
-  --ink-2: #c9c5be;
-  --ink-3: #8a847b;
-  --ink-4: #5a5550;
-  --accent: #ff5a36;
-  --grid: rgba(255,255,255,0.03);
-  --leaflet-tile-filter: invert(0.94) hue-rotate(180deg) brightness(0.92) contrast(0.92) saturate(0.55);
-
   background: var(--bg);
   color: var(--ink);
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 13px;
-  line-height: 1.55;
-  transition: background 200ms ease, color 200ms ease;
+}
+
+body[data-theme="dark"] {
+  --bg:          #0d0d0d;
+  --bg-2:        #131313;
+  --bg-3:        #161616;
+  --panel:       #161616;
+  --line:        #242424;
+  --line-2:      #1c1c1c;
+  --ink:         #ededea;
+  --ink-2:       #c9c5be;
+  --ink-3:       #8a847b;
+  --ink-4:       #5a5550;
+  --accent:      #ff5a36;
+  --accent-soft: rgba(255, 90, 54, 0.12);
+  --leaflet-tile-filter: invert(0.94) hue-rotate(180deg) brightness(0.92) contrast(0.92) saturate(0.55);
 }
 
 body[data-theme="light"] {
-  --bg: #f3efe7;
-  --bg-2: #ece7dc;
-  --panel: #ffffff;
-  --line: #d8d2c4;
-  --line-2: #e6e0d2;
-  --ink: #1a1816;
-  --ink-2: #3d3934;
-  --ink-3: #6e6860;
-  --ink-4: #9a9389;
-  --accent: #d94524;
-  --grid: rgba(0,0,0,0.04);
+  --bg:          #f3efe7;
+  --bg-2:        #ece7dc;
+  --bg-3:        #ffffff;
+  --panel:       #ffffff;
+  --line:        #d8d2c4;
+  --line-2:      #e6e0d2;
+  --ink:         #1a1816;
+  --ink-2:       #3d3934;
+  --ink-3:       #6e6860;
+  --ink-4:       #9a9389;
+  --accent:      #d94524;
+  --accent-soft: rgba(217, 69, 36, 0.10);
   --leaflet-tile-filter: none;
 }
 
-/* Topo background — applied via .landing-root .topo-bg */
-.landing-root .topo-bg {
-  position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: radial-gradient(circle at 50% 30%, black 0%, transparent 80%);
+/* Leaflet skin — only applies when a theme is active */
+body[data-theme] .leaflet-tile-pane {
+  filter: var(--leaflet-tile-filter, none);
 }
-
-/* Leaflet skin for landing */
-.landing-root .leaflet-tile-pane { filter: var(--leaflet-tile-filter); }
-.landing-root .leaflet-container { background: var(--bg-2); font-family: inherit; outline: none; }
-.landing-root .leaflet-control-attribution {
+body[data-theme] .leaflet-container {
+  background: var(--bg-2);
+  font-family: 'JetBrains Mono', monospace;
+  outline: none;
+}
+body[data-theme] .leaflet-control-attribution {
   background: transparent !important;
   color: var(--ink-4) !important;
   font-size: 9px !important;
   font-family: 'JetBrains Mono', monospace !important;
 }
-.landing-root .leaflet-control-attribution a { color: var(--ink-3) !important; }
-.landing-root .leaflet-control-zoom { display: none; }
+body[data-theme] .leaflet-control-attribution a { color: var(--ink-3) !important; }
+body[data-theme] .leaflet-control-zoom { display: none; }
 
+/* Map marker used by dashboard */
 .gt-marker {
-  width: 10px; height: 10px;
-  background: var(--accent);
+  width: 8px; height: 8px;
+  background: var(--accent, #ff5a36);
   border-radius: 50%;
-  border: 2px solid var(--bg);
-  box-shadow: 0 0 0 1px var(--accent);
+  border: 1.5px solid var(--bg, #0d0d0d);
+  box-shadow: 0 0 0 1px var(--accent, #ff5a36);
 }
-.gt-marker.live { animation: gt-pulse-dot 1.6s infinite; }
 
 @keyframes gt-pulse-dot {
-  0% { box-shadow: 0 0 0 0 var(--accent); }
-  70% { box-shadow: 0 0 0 12px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
+  0%   { box-shadow: 0 0 0 0   var(--accent, #ff5a36); }
+  70%  { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0   transparent; }
 }
+.gt-marker.live { animation: gt-pulse-dot 1.6s infinite; }

@@ -38,6 +38,7 @@ export interface LocationPoint {
   recordedAt: string;
   source: string;
   createdAt: string;
+  activityType?: string;
 }
 
 export interface LocationCreateRequest {
@@ -67,6 +68,18 @@ export interface StatsSnapshot {
   totalDistanceMeters: number;
   earliestPoint?: string;
   latestPoint?: string;
+}
+
+export interface HeatmapCenter {
+  latitude: number | null;
+  longitude: number | null;
+  pointCount: number;
+}
+
+export interface HeatmapTileItem {
+  lat: number;
+  lng: number;
+  pointCount: number;
 }
 
 // ==================== Places ====================
@@ -129,4 +142,27 @@ export interface DailyStat {
 export interface ActivityDistance {
   activityType: string;
   totalDistanceM: number;
+}
+
+// ==================== RAG ====================
+export interface RagQueryRequest {
+  question: string;
+  model?: string;
+  temperature?: number;
+}
+
+export interface RagQueryResponse {
+  answer: string;
+  sources: string[];
+}
+
+export interface RagEmbedRequest {
+  since?: string;
+}
+
+export interface RagEmbedResponse {
+  processed: number;
+  skipped: number;
+  failed: number;
+  elapsedSeconds: number;
 }

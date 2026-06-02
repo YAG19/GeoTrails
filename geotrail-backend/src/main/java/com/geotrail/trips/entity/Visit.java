@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.locationtech.jts.geom.Point;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
@@ -40,6 +41,23 @@ public class Visit {
 
     @Column(name = "duration_minutes")
     private Integer durationMinutes;
+
+    /** Raw Google placeId for the visited place (e.g. "ChIJ..."). */
+    @Column(name = "google_place_id")
+    private String googlePlaceId;
+
+    /** HOME, WORK, UNKNOWN, etc. as inferred by Google. */
+    @Column(name = "semantic_type", length = 50)
+    private String semanticType;
+
+    @Column(name = "lat", precision = 10, scale = 7)
+    private BigDecimal lat;
+
+    @Column(name = "lng", precision = 10, scale = 7)
+    private BigDecimal lng;
+
+    @Column(name = "probability", precision = 5, scale = 4)
+    private BigDecimal probability;
 
     @Column(name = "created_at", updatable = false)
     @Builder.Default

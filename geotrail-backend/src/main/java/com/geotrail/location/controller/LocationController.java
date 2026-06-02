@@ -13,7 +13,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -82,6 +81,30 @@ public class LocationController {
     }
 
     /**
+     * Returns the lat/lng of the user's densest ~1km area — used as the default map center.
+     * Reads from the pre-computed heatmap_tiles table (refreshed nightly).
+     * GET /api/locations/heatmap-center
+     */
+    @GetMapping("/heatmap-center")
+    public ResponseEntity<ApiResponse<HeatmapCenter>> getHeatmapCenter(
+            @AuthenticationPrincipal User user
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(locationService.getHeatmapCenter(user.getId())));
+    }
+
+    /**
+     * Returns top 100 density tiles for the user — used to render heatmap circles on the map.
+     * Reads from the pre-computed heatmap_tiles table (refreshed nightly).
+     * GET /api/locations/heatmap-tiles
+     */
+    @GetMapping("/heatmap-tiles")
+    public ResponseEntity<ApiResponse<List<HeatmapTileDto>>> getHeatmapTiles(
+            @AuthenticationPrincipal User user
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(locationService.getHeatmapTiles(user.getId())));
+    }
+
+    /**
      * Quick stats for a time range.
      * GET /api/locations/stats?from=2024-01-01T00:00:00Z&to=2024-12-31T23:59:59Z
      */
@@ -100,5 +123,11 @@ public class LocationController {
                 .build();
 
         return ResponseEntity.ok(ApiResponse.success(stats));
+    }
+
+    @GetMapping("/activity-type")
+    public ResponseEntity<List<String>> getDistinctActivityOfUser(
+            @AuthenticationPrincipal User user){
+        return ResponseEntity.ok(locationService.getDistinctActivityType(user.getId()));
     }
 }

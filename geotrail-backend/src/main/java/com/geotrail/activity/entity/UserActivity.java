@@ -4,6 +4,7 @@ import com.geotrail.auth.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -38,6 +39,25 @@ public class UserActivity {
 
     @Column
     private Double probability;
+
+    /** Start/end instants of the travel segment (from Google Timeline). */
+    @Column(name = "start_time")
+    private Instant startTime;
+
+    @Column(name = "end_time")
+    private Instant endTime;
+
+    @Column(name = "start_lat", precision = 10, scale = 7)
+    private BigDecimal startLat;
+
+    @Column(name = "start_lng", precision = 10, scale = 7)
+    private BigDecimal startLng;
+
+    @Column(name = "end_lat", precision = 10, scale = 7)
+    private BigDecimal endLat;
+
+    @Column(name = "end_lng", precision = 10, scale = 7)
+    private BigDecimal endLng;
 
     @Column(name = "created_at", updatable = false)
     @Builder.Default
