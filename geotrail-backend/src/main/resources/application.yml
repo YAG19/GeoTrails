@@ -86,7 +86,7 @@ anthropic:
 
 gemini:
   api:
-    key: ${ANTHROPIC_API_KEY:}
+    key: ${NTHROPIC_API_KEY:}
 
 geotrail:
   rag:
