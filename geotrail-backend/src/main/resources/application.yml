@@ -86,7 +86,7 @@ anthropic:
 
 gemini:
   api:
-    key: AQ.Ab8RN6K9SLoNZRlPN_VDG9RTxm4fhovLcwqBsBYBqTabq7YU8A
+    key: ${ANTHROPIC_API_KEY:}
 
 geotrail:
   rag:
