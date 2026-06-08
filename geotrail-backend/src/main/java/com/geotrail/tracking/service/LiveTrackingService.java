@@ -8,6 +8,7 @@ import com.geotrail.location.repository.LocationPointRepository;
 import com.geotrail.tracking.dto.OwnTracksPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +21,9 @@ import java.time.Instant;
 public class LiveTrackingService {
 
     private final LocationPointRepository locationRepo;
-    private final SimpMessagingTemplate messagingTemplate;
+
+    @Autowired(required = false)
+    private SimpMessagingTemplate messagingTemplate;
 
     /**
      * Process an OwnTracks location payload:
@@ -68,9 +71,10 @@ public class LiveTrackingService {
                 .source(saved.getSource())
                 .build();
 
-        // Broadcast to user-specific topic
-        String destination = "/topic/tracking/" + user.getId();
-        messagingTemplate.convertAndSend(destination, response);
+        if (messagingTemplate != null) {
+            String destination = "/topic/tracking/" + user.getId();
+            messagingTemplate.convertAndSend(destination, response);
+        }
 
         log.debug("Processed OwnTracks point for user {}: ({}, {})",
                 user.getUsername(), payload.getLat(), payload.getLon());

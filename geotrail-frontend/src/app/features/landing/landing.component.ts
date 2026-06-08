@@ -1,13 +1,15 @@
-import { Component, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { LandingHeroComponent } from './landing-hero.component';
 import { LandingDemoComponent } from './landing-demo.component';
 import { LandingImportsComponent } from './landing-imports.component';
+import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, LandingHeroComponent],
+  imports: [CommonModule, RouterLink, LandingHeroComponent],
   template: `
     <div class="landing-root">
       <div class="topo-bg"></div>
@@ -33,10 +35,10 @@ import { LandingImportsComponent } from './landing-imports.component';
               <span class="logo-text">GEOTRAIL<span class="logo-version">/v0.4</span></span>
             </a>
             <div class="nav-links">
-              <a href="#docs">docs</a>
-              <a href="#self-host">self-host</a>
-              <a href="#changelog">changelog</a>
-              <a href="https://github.com">github <span class="ext">↗</span></a>
+              <span class="nav-link-soon" title="Coming soon">docs</span>
+              <span class="nav-link-soon" title="Coming soon">self-host</span>
+              <span class="nav-link-soon" title="Coming soon">changelog</span>
+              <a href="https://github.com/YAG19/GeoTrails" target="_blank" rel="noopener">github <span class="ext">↗</span></a>
             </div>
           </div>
           <div class="nav-right">
@@ -44,8 +46,12 @@ import { LandingImportsComponent } from './landing-imports.component';
             <button class="btn theme-toggle" (click)="toggleTheme()">
               {{ theme() === 'dark' ? '☾ dark' : '☀ light' }}
             </button>
-            <a href="/login" class="btn small">sign_in</a>
-            <a href="/register" class="btn btn-primary small">./start <span class="btn-arrow">→</span></a>
+            @if (authService.isAuthenticated()) {
+              <a routerLink="/dashboard" class="btn btn-primary small">→ dashboard</a>
+            } @else {
+              <a routerLink="/login" class="btn small">sign_in</a>
+              <a routerLink="/register" class="btn btn-primary small">./start <span class="btn-arrow">→</span></a>
+            }
           </div>
         </div>
       </nav>
@@ -163,8 +169,14 @@ import { LandingImportsComponent } from './landing-imports.component';
     }
     .logo-text { letter-spacing: 0.06em; }
     .logo-version { color: var(--ink-4); }
-    .nav-links { display: flex; gap: 22px; color: var(--ink-3); }
+    .nav-links { display: flex; gap: 22px; color: var(--ink-3); align-items: center; }
     .nav-links a { color: inherit; }
+    .nav-link-soon {
+      color: var(--ink-4);
+      cursor: default;
+      opacity: 0.45;
+      font-size: 12px;
+    }
     .ext { color: var(--ink-4); }
     .utc { color: var(--ink-4); font-size: 11px; }
     .btn.small { padding: 8px 14px; }
@@ -264,6 +276,7 @@ import { LandingImportsComponent } from './landing-imports.component';
   `],
 })
 export class LandingComponent implements OnInit, OnDestroy {
+  authService = inject(AuthService);
   theme = signal<'dark' | 'light'>('dark');
   utc = signal('');
   today = new Date().toISOString().slice(0, 10);

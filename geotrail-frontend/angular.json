@@ -81,6 +81,17 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "docker-dev": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.docker-dev.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -93,6 +104,9 @@
             },
             "development": {
               "buildTarget": "geotrail-frontend:build:development"
+            },
+            "docker-dev": {
+              "buildTarget": "geotrail-frontend:build:docker-dev"
             }
           },
           "defaultConfiguration": "development"

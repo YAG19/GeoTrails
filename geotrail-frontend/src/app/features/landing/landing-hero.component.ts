@@ -21,7 +21,7 @@ interface Trail {
       <div class="container">
         <div class="status-bar">
           <span>~/geotrail/<span class="status-bar-path">landing</span> <span class="cursor"></span></span>
-          <span>● connected · 3 devices syncing · last_ping 2s ago</span>
+          <span>● connected · 1 devices syncing · last_ping 2s ago</span>
         </div>
 
         <div class="hero-grid">

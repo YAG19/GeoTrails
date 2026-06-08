@@ -2,6 +2,7 @@ package com.geotrail.rag.client;
 
 import com.geotrail.rag.llm.LlmProvider;
 
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,6 +53,14 @@ public class GeminiLlmProvider implements LlmProvider {
     private final String model;
     private final double temperature;
     private final int maxTokens;
+
+    @Value("${gemini.api.key:NOT_SET}")
+    private String geminiKey;
+
+    @PostConstruct
+    void checkEnv() {
+        log.info("GEMINI_API_KEY loaded: {}", geminiKey.isBlank() ? "EMPTY/NOT SET" : "OK (length=" + geminiKey.length() + ")");
+    }
 
     public GeminiLlmProvider(
             @Value("${gemini.api.key:${GEMINI_API_KEY:}}") String apiKey,

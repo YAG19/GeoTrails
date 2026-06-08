@@ -1,14 +1,15 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { AuthService } from './core/auth/auth.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
   template: `
-    @if (authService.isAuthenticated()) {
+    @if (authService.isAuthenticated() && !isLandingPage()) {
       <div class="app-layout">
         <nav class="sidebar">
           <!-- logo -->
@@ -117,6 +118,17 @@ import { AuthService } from './core/auth/auth.service';
     .content { flex: 1; overflow: auto; background: #f5f5f5; }
   `],
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   authService = inject(AuthService);
+  private router = inject(Router);
+  isLandingPage = signal(false);
+
+  ngOnInit() {
+    this.isLandingPage.set(this.router.url.startsWith('/landing'));
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd)
+    ).subscribe((e: any) => {
+      this.isLandingPage.set(e.url.startsWith('/landing'));
+    });
+  }
 }

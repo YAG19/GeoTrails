@@ -15,18 +15,17 @@ services:
     build: ./geotrail-backend
     ports:
       - "8080:8080"
+    env_file:
+      - .env
+      - ./geotrail-backend/.env
     environment:
       SPRING_PROFILES_ACTIVE: dev
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: geotrail
       DB_USERNAME: geotrail
-      DB_PASSWORD: ${DB_PASSWORD:-geotrail_dev}
       REDIS_HOST: redis
       MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin} 
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production-must-be-256-bits-long-at-minimum}
     depends_on:
       postgres:
         condition: service_healthy

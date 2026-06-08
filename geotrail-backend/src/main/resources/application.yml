@@ -86,9 +86,11 @@ anthropic:
 
 gemini:
   api:
-    key: ${NTHROPIC_API_KEY:}
+    key: ${GEMINI_API_KEY:}
 
 geotrail:
+  websocket:
+    enabled: false
   rag:
     llm-provider: ${RAG_LLM_PROVIDER:gemini}   # which chat backend answers: "lmstudio" (local, default) | "claude" | "gemini"
     # which model produces vectors (separate axis from llm-provider). "lmstudio" (local, default) | "gemini".
