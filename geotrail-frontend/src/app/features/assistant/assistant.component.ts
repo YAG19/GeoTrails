@@ -11,6 +11,8 @@ interface Message {
   sources?: string[];
 }
 
+type LlmProvider = 'gemini' | 'ollama' | 'lmstudio';
+
 @Component({
   selector: 'app-assistant',
   standalone: true,
@@ -20,36 +22,75 @@ interface Message {
       <!-- Settings Sidebar Panel -->
       <aside class="settings-sidebar">
         <div class="sidebar-section">
-          <h3>🤖 LM Studio Config</h3>
+          <h3>🤖 LLM Provider</h3>
           <div class="form-group">
-            <label for="lms-url">Base API URL</label>
-            <input
-              id="lms-url"
-              type="text"
-              [(ngModel)]="lmsUrl"
-              placeholder="http://localhost:1234"
+            <label for="llm-provider">Provider</label>
+            <select
+              id="llm-provider"
+              [(ngModel)]="selectedProvider"
+              (ngModelChange)="onProviderChange()"
               class="form-control"
-            />
+            >
+              <option value="gemini">Google Gemini (Cloud)</option>
+              <option value="ollama">Ollama</option>
+              <option value="lmstudio">LM Studio (Local)</option>
+            </select>
+            <small class="help-text">Set RAG_LLM_PROVIDER on the backend to match.</small>
           </div>
-          <button class="btn btn-secondary" (click)="fetchModels()" [disabled]="loadingModels()">
-            {{ loadingModels() ? 'Fetching...' : '🔄 Refresh Models' }}
-          </button>
-          
-          <div class="form-group mt-3">
-            <label for="lms-model">LLM Model</label>
-            <select id="lms-model" [(ngModel)]="selectedModel" class="form-control">
-              @if (models().length === 0) {
-                <option value="">-- No models loaded --</option>
-              } @else {
-                @for (m of models(); track m) {
+
+          @if (selectedProvider === 'gemini') {
+            <div class="form-group mt-3">
+              <label for="gemini-model">LLM Model</label>
+              <select id="gemini-model" [(ngModel)]="selectedModel" class="form-control">
+                @for (m of geminiModels; track m) {
                   <option [value]="m">{{ m }}</option>
                 }
+              </select>
+            </div>
+          }
+
+          @if (selectedProvider === 'ollama') {
+            <div class="form-group mt-3">
+              <label for="ollama-model">LLM Model</label>
+              <select id="ollama-model" [(ngModel)]="selectedModel" class="form-control">
+                @for (m of ollamaModels; track m) {
+                  <option [value]="m">{{ m }}</option>
+                }
+              </select>
+              <small class="help-text">Uses the Ollama instance configured on the backend (OLLAMA_BASE_URL).</small>
+            </div>
+          }
+
+          @if (selectedProvider === 'lmstudio') {
+            <div class="form-group mt-3">
+              <label for="lms-url">Base API URL</label>
+              <input
+                id="lms-url"
+                type="text"
+                [(ngModel)]="lmsUrl"
+                placeholder="http://localhost:1234"
+                class="form-control"
+              />
+            </div>
+            <button class="btn btn-secondary" (click)="fetchModels()" [disabled]="loadingModels()">
+              {{ loadingModels() ? 'Fetching...' : '🔄 Refresh Models' }}
+            </button>
+            <div class="form-group mt-3">
+              <label for="lms-model">LLM Model</label>
+              <select id="lms-model" [(ngModel)]="selectedModel" class="form-control">
+                @if (lmsModels().length === 0) {
+                  <option value="">-- No models loaded --</option>
+                } @else {
+                  @for (m of lmsModels(); track m) {
+                    <option [value]="m">{{ m }}</option>
+                  }
+                }
+              </select>
+              @if (lmsModels().length === 0) {
+                <small class="help-text">Click "Refresh Models" or ensure LM Studio local server is active.</small>
               }
-            </select>
-            @if (models().length === 0) {
-              <small class="help-text">Click "Refresh Models" or ensure LM Studio local server is active.</small>
-            }
-          </div>
+            </div>
+          }
 
           <div class="form-group mt-3">
             <label for="temp-slider">Temperature: {{ temperature }}</label>
@@ -105,9 +146,13 @@ interface Message {
         <header class="chat-header">
           <div class="title-area">
             <h2>💬 Timeline AI Assistant</h2>
-            @if (selectedModel === 'gemini-2.5-flash') {
+            @if (selectedProvider === 'gemini') {
               <span class="status-indicator online">
-                Gemini Cloud Active
+                Gemini Cloud Active ({{ selectedModel }})
+              </span>
+            } @else if (selectedProvider === 'ollama') {
+              <span class="status-indicator online">
+                Ollama Active ({{ selectedModel }})
               </span>
             } @else {
               <span class="status-indicator" [class.online]="lmsConnected()">
@@ -684,13 +729,16 @@ interface Message {
 export class AssistantComponent implements OnInit {
   private apiService = inject(ApiService);
 
+  selectedProvider: LlmProvider = 'gemini';
   lmsUrl = 'http://localhost:1234';
   selectedModel = 'gemini-2.5-flash';
   temperature = 0.2;
   userInput = '';
   embedSince = '';
 
-  models = signal<string[]>(['gemini-2.5-flash']);
+  readonly geminiModels = ['gemini-2.5-flash'];
+  readonly ollamaModels = ['kimi-k2.6', 'qwen3.5'];
+  lmsModels = signal<string[]>([]);
   lmsConnected = signal<boolean>(false);
   typing = signal<boolean>(false);
   indexing = signal<boolean>(false);
@@ -706,8 +754,30 @@ export class AssistantComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    // Attempt automatic model fetch on init
-    this.fetchModels();
+    if (this.selectedProvider === 'lmstudio') {
+      this.fetchModels();
+    }
+  }
+
+  onProviderChange(): void {
+    const models = this.modelsForProvider(this.selectedProvider);
+    if (!models.includes(this.selectedModel)) {
+      this.selectedModel = models[0] ?? '';
+    }
+    if (this.selectedProvider === 'lmstudio') {
+      this.fetchModels();
+    }
+  }
+
+  private modelsForProvider(provider: LlmProvider): string[] {
+    switch (provider) {
+      case 'gemini':
+        return this.geminiModels;
+      case 'ollama':
+        return this.ollamaModels;
+      case 'lmstudio':
+        return this.lmsModels();
+    }
   }
 
   fetchModels(): void {
@@ -717,18 +787,21 @@ export class AssistantComponent implements OnInit {
         this.loadingModels.set(false);
         if (res && res.data && Array.isArray(res.data)) {
           const modelList = res.data.map((item: any) => item.id);
-          this.models.set(['gemini-2.5-flash', ...modelList]);
+          this.lmsModels.set(modelList);
           this.lmsConnected.set(true);
-          if (!this.selectedModel || !this.models().includes(this.selectedModel)) {
-            this.selectedModel = 'gemini-2.5-flash';
+          if (this.selectedProvider === 'lmstudio' &&
+              (!this.selectedModel || !this.lmsModels().includes(this.selectedModel))) {
+            this.selectedModel = this.lmsModels()[0] ?? '';
           }
         }
       },
       error: (err) => {
         this.loadingModels.set(false);
-        this.models.set(['gemini-2.5-flash']);
+        this.lmsModels.set([]);
         this.lmsConnected.set(false);
-        this.selectedModel = 'gemini-2.5-flash';
+        if (this.selectedProvider === 'lmstudio') {
+          this.selectedModel = '';
+        }
         console.warn('Failed to auto-fetch models from LM Studio:', err);
       }
     });
@@ -795,14 +868,29 @@ export class AssistantComponent implements OnInit {
         this.typing.set(false);
         this.messages.update((prev) => [...prev, {
           sender: 'assistant',
-          text: `⚠️ I couldn't query the RAG service. Make sure:\n` +
-                `1. You ran **RAG Vector Indexing** in the settings side panel.\n` +
-                `2. LM Studio API server is running at \`${this.lmsUrl}\`.\n` +
-                `3. The model \`${this.selectedModel || 'local-model'}\` is loaded in LM Studio.`,
+          text: this.buildQueryErrorMessage(),
           timestamp: new Date()
         }]);
         console.error(err);
       }
     });
+  }
+
+  private buildQueryErrorMessage(): string {
+    const base = `⚠️ I couldn't query the RAG service. Make sure:\n` +
+      `1. You ran **RAG Vector Indexing** in the settings side panel.\n` +
+      `2. Backend \`RAG_LLM_PROVIDER\` is set to \`${this.selectedProvider}\`.\n`;
+
+    if (this.selectedProvider === 'gemini') {
+      return base + `3. \`GEMINI_API_KEY\` is configured on the backend.`;
+    }
+    if (this.selectedProvider === 'ollama') {
+      return base +
+        `3. Ollama is reachable at the backend \`OLLAMA_BASE_URL\`.\n` +
+        `4. The model \`${this.selectedModel}\` is available in Ollama.`;
+    }
+    return base +
+      `3. LM Studio API server is running at \`${this.lmsUrl}\`.\n` +
+      `4. The model \`${this.selectedModel || 'local-model'}\` is loaded in LM Studio.`;
   }
 }

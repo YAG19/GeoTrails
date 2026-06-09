@@ -88,11 +88,15 @@ gemini:
   api:
     key: ${GEMINI_API_KEY:}
 
+ollama:
+  api:
+    key: ${OLLAMA_API_KEY:}
+
 geotrail:
   websocket:
     enabled: false
   rag:
-    llm-provider: ${RAG_LLM_PROVIDER:gemini}   # which chat backend answers: "lmstudio" (local, default) | "claude" | "gemini"
+    llm-provider: ${RAG_LLM_PROVIDER:ollama}   # which chat backend answers: "lmstudio" | "claude" | "gemini" | "ollama"
     # which model produces vectors (separate axis from llm-provider). "lmstudio" (local, default) | "gemini".
     # Each provider writes/reads its OWN table, so switching does NOT require dropping existing vectors,
     # but you must re-run /api/rag/embed to populate the new provider's table before querying with it.
@@ -117,6 +121,13 @@ geotrail:
       embedding-model: ${LMSTUDIO_EMBEDDING_MODEL:text-embedding-nomic-embed-text-v1.5}  # 768-dim; matches V11
       temperature: 0.2        # low = factual/grounded, less hallucination
       max-tokens: 10024        # keep >=512: thinking models spend tokens reasoning first
+    # Moonshot AI (Kimi) — cloud API, OpenAI-compatible.
+    # Requires OLLAMA_API_KEY set to your Moonshot API key from platform.moonshot.cn
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:https://api.moonshot.cn/v1}
+      model: ${OLLAMA_MODEL:kimi-k2}
+      temperature: 0.2
+      max-tokens: 4096
     top-k: 15                 # how many chunks to retrieve (a full day can be ~13 segments)
     min-similarity: 0.4       # drop chunks below this cosine score (nomic-embed q<->stmt sits ~0.4-0.6)
     max-context-chars: 3000   # cap context sent to the LLM

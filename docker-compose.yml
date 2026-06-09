@@ -1,3 +1,7 @@
+x-buildkit: &buildkit
+  args:
+    BUILDKIT_INLINE_CACHE: "1"
+
 services:
   # ==================== FRONTEND ====================
   frontend:

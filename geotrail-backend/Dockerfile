@@ -1,17 +1,16 @@
 # ==================== BUILD STAGE ====================
+# syntax=docker/dockerfile:1
 FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 
 WORKDIR /app
 
-# Copy pom first (layer caching for dependencies)
 COPY pom.xml .
-
-# Download dependencies (cached unless pom.xml changes)
-RUN mvn dependency:go-offline -B
-
-# Copy source and build
 COPY src/ src/
-RUN mvn package -DskipTests -B
+
+# BuildKit cache mount: ~/.m2 is reused across every build.
+# Dependencies are never re-downloaded unless pom.xml changes.
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn package -DskipTests -B
 
 # ==================== RUNTIME STAGE ====================
 FROM eclipse-temurin:21-jre-alpine
