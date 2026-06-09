@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
-import { HeatmapCenter, Place } from '../../core/models/api.models';
+import { HeatmapCenter, Place, LabelSuggestion } from '../../core/models/api.models';
 
 @Component({
   selector: 'app-places',
@@ -12,10 +12,37 @@ import { HeatmapCenter, Place } from '../../core/models/api.models';
     <div class="places-page">
       <div class="page-header">
         <h2 class="page-title">Places</h2>
-        <button class="btn-add" (click)="showForm.set(!showForm())">
-          {{ showForm() ? 'Cancel' : '+ Add Place' }}
-        </button>
+        <div class="header-actions">
+          <button class="btn-ai" (click)="loadSuggestions()" [disabled]="loadingSuggestions()">
+            {{ loadingSuggestions() ? '✨ Thinking…' : '✨ Suggest places (AI)' }}
+          </button>
+          <button class="btn-add" (click)="showForm.set(!showForm())">
+            {{ showForm() ? 'Cancel' : '+ Add Place' }}
+          </button>
+        </div>
       </div>
+
+      @if (suggestions().length > 0) {
+        <div class="ai-suggestions">
+          <div class="ai-head">
+            <span class="ai-label">✨ AI SUGGESTIONS</span>
+            <span class="ai-sub">frequently visited spots you haven't named</span>
+          </div>
+          @for (s of suggestions(); track s.lat + ',' + s.lng) {
+            <div class="ai-row">
+              <div class="ai-info">
+                <span class="ai-name">{{ s.suggestedName }}</span>
+                @if (s.category) { <span class="ai-cat">{{ s.category }}</span> }
+                <span class="ai-reason">{{ s.areaName || (s.lat.toFixed(4) + ', ' + s.lng.toFixed(4)) }} · {{ s.reasoning }}</span>
+              </div>
+              <div class="ai-actions">
+                <button class="btn-accept" (click)="acceptSuggestion(s)">Accept</button>
+                <button class="btn-dismiss-s" (click)="dismissSuggestion(s)">✕</button>
+              </div>
+            </div>
+          }
+        </div>
+      }
 
       @if (hotspot(); as h) {
         @if (h.latitude != null && !hotspotDismissed()) {
@@ -75,8 +102,36 @@ import { HeatmapCenter, Place } from '../../core/models/api.models';
     .places-page { padding: 24px; max-width: 800px; }
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
     .page-title { margin: 0; font-size: 1.5rem; color: var(--text-primary); }
+    .header-actions { display: flex; gap: 10px; }
     .btn-add { padding: 8px 20px; background: #4fc3f7; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; }
     .btn-add:hover { background: #29b6f6; }
+    .btn-ai { padding: 8px 20px; background: transparent; color: #b388ff; border: 1px solid #7c4dff; border-radius: 8px; cursor: pointer; font-weight: 500; }
+    .btn-ai:hover:not(:disabled) { background: rgba(124,77,255,0.12); }
+    .btn-ai:disabled { opacity: 0.6; cursor: default; }
+
+    .ai-suggestions {
+      background: #15102a;
+      border: 1px solid #3d2c70;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+    .ai-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+    .ai-label { font-size: 0.75rem; font-weight: 700; color: #b388ff; letter-spacing: 0.08em; }
+    .ai-sub { font-size: 0.8rem; color: #8a7fb8; }
+    .ai-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; border-bottom: 1px dashed #2c2350;
+    }
+    .ai-row:last-child { border-bottom: none; }
+    .ai-info { display: flex; flex-direction: column; gap: 2px; }
+    .ai-name { font-weight: 600; color: #e7defb; font-size: 0.95rem; }
+    .ai-cat { font-size: 0.72rem; color: #b388ff; text-transform: uppercase; }
+    .ai-reason { font-size: 0.78rem; color: #8a7fb8; font-family: monospace; }
+    .ai-actions { display: flex; align-items: center; gap: 8px; }
+    .btn-accept { padding: 6px 16px; background: #7c4dff; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+    .btn-accept:hover { background: #6c3fef; }
+    .btn-dismiss-s { background: none; border: none; color: #6c5b9c; cursor: pointer; font-size: 0.9rem; padding: 0 4px; }
 
     .hotspot-card {
       background: #0d2a1a;
@@ -158,6 +213,9 @@ export class PlacesComponent implements OnInit {
   hotspotName = '';
   hotspotCategory = '';
 
+  suggestions = signal<LabelSuggestion[]>([]);
+  loadingSuggestions = signal(false);
+
   ngOnInit(): void {
     this.loadPlaces();
     this.apiService.getHeatmapCenter().subscribe({
@@ -200,5 +258,29 @@ export class PlacesComponent implements OnInit {
 
   deletePlace(id: number): void {
     this.apiService.deletePlace(id).subscribe({ next: () => this.loadPlaces() });
+  }
+
+  loadSuggestions(): void {
+    this.loadingSuggestions.set(true);
+    this.apiService.getLabelSuggestions().subscribe({
+      next: (s) => { this.suggestions.set(s ?? []); this.loadingSuggestions.set(false); },
+      error: () => { this.suggestions.set([]); this.loadingSuggestions.set(false); },
+    });
+  }
+
+  acceptSuggestion(s: LabelSuggestion): void {
+    this.apiService.createPlace({
+      name: s.suggestedName,
+      latitude: s.lat,
+      longitude: s.lng,
+      radiusMeters: 120,
+      category: s.category || undefined,
+    }).subscribe({
+      next: () => { this.dismissSuggestion(s); this.loadPlaces(); },
+    });
+  }
+
+  dismissSuggestion(s: LabelSuggestion): void {
+    this.suggestions.update(list => list.filter(x => x !== s));
   }
 }

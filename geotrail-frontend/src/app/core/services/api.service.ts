@@ -20,6 +20,16 @@ import {
   RagQueryResponse,
   RagEmbedRequest,
   RagEmbedResponse,
+  DayTimeline,
+  TimelineSegment,
+  TimelinePathPoint,
+  TransportMode,
+  CommuteTrip,
+  DwellStat,
+  NarrativeRequest,
+  NarrativeResponse,
+  LabelSuggestion,
+  Anomaly,
 } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -43,6 +53,59 @@ export class ApiService {
   triggerRagEmbedding(request: RagEmbedRequest): Observable<RagEmbedResponse> {
     return this.http
       .post<RagEmbedResponse>(`${this.baseUrl}/rag/embed`, request);
+  }
+
+  narrative(request: NarrativeRequest): Observable<NarrativeResponse> {
+    return this.http.post<NarrativeResponse>(`${this.baseUrl}/rag/narrative`, request);
+  }
+
+  // ==================== Timeline (semantic) ====================
+
+  getTimelineDay(date: string): Observable<DayTimeline> {
+    const params = new HttpParams().set('date', date);
+    return this.http
+      .get<ApiResponse<DayTimeline>>(`${this.baseUrl}/timeline/day`, { params })
+      .pipe(map((res) => res.data));
+  }
+
+  getTimelineSegments(from: string, to: string): Observable<TimelineSegment[]> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.http
+      .get<ApiResponse<TimelineSegment[]>>(`${this.baseUrl}/timeline/segments`, { params })
+      .pipe(map((res) => res.data));
+  }
+
+  getTimelinePath(from: string, to: string): Observable<TimelinePathPoint[]> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.http
+      .get<ApiResponse<TimelinePathPoint[]>>(`${this.baseUrl}/timeline/path`, { params })
+      .pipe(map((res) => res.data));
+  }
+
+  getTransportBreakdown(from: string, to: string): Observable<TransportMode[]> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.http
+      .get<ApiResponse<TransportMode[]>>(`${this.baseUrl}/timeline/transport-breakdown`, { params })
+      .pipe(map((res) => res.data));
+  }
+
+  getCommutePatterns(): Observable<CommuteTrip[]> {
+    return this.http
+      .get<ApiResponse<CommuteTrip[]>>(`${this.baseUrl}/timeline/commute-patterns`)
+      .pipe(map((res) => res.data));
+  }
+
+  getDwellStats(from: string, to: string): Observable<DwellStat[]> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.http
+      .get<ApiResponse<DwellStat[]>>(`${this.baseUrl}/timeline/dwell`, { params })
+      .pipe(map((res) => res.data));
+  }
+
+  correctSegment(id: number, activityType: string): Observable<TimelineSegment> {
+    return this.http
+      .post<ApiResponse<TimelineSegment>>(`${this.baseUrl}/timeline/segments/${id}/correct`, { activityType })
+      .pipe(map((res) => res.data));
   }
 
   // ==================== Locations ====================
@@ -98,6 +161,12 @@ export class ApiService {
   getPlaces(): Observable<Place[]> {
     return this.http
       .get<ApiResponse<Place[]>>(`${this.baseUrl}/places`)
+      .pipe(map((res) => res.data));
+  }
+
+  getLabelSuggestions(): Observable<LabelSuggestion[]> {
+    return this.http
+      .get<ApiResponse<LabelSuggestion[]>>(`${this.baseUrl}/places/label-suggestions`)
       .pipe(map((res) => res.data));
   }
 
@@ -163,6 +232,13 @@ getDailyStats(from: string, to: string): Observable<DailyStat[]> {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.http
       .get<ApiResponse<ActivityDistance[]>>(`${this.baseUrl}/stats/activity-distances`, { params })
+      .pipe(map((res) => res.data));
+  }
+
+  getAnomalies(from: string, to: string): Observable<Anomaly[]> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.http
+      .get<ApiResponse<Anomaly[]>>(`${this.baseUrl}/stats/anomalies`, { params })
       .pipe(map((res) => res.data));
   }
 

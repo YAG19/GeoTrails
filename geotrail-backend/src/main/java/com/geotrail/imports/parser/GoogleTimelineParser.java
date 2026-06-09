@@ -6,6 +6,8 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.geotrail.imports.dto.SemanticDtos.ParsedActivity;
+import com.geotrail.imports.dto.SemanticDtos.ParsedFrequentPlace;
+import com.geotrail.imports.dto.SemanticDtos.ParsedFrequentTrip;
 import com.geotrail.imports.dto.SemanticDtos.ParsedTimelinePath;
 import com.geotrail.imports.dto.SemanticDtos.ParsedVisit;
 import com.geotrail.location.dto.LocationDtos.CreateRequest;
@@ -220,9 +222,96 @@ public class GoogleTimelineParser {
             log.info("Extracted {} additional points from rawSignals", rawCount);
         }
 
-        log.info("Parsed {} points, {} visits, {} activities, {} path crumbs from {} segments ({} errors)",
-                points.size(), visits.size(), activities.size(), timelinePaths.size(), totalSegments, errors);
-        return new ParseResult(points, visits, activities, timelinePaths, totalSegments, errors, null);
+        // Mine the commute-pattern sections that were previously discarded. These can
+        // live at the root or nested under userLocationProfile depending on the export.
+        List<ParsedFrequentPlace> frequentPlaces = parseFrequentPlaces(root);
+        List<ParsedFrequentTrip> frequentTrips = parseFrequentTrips(root);
+
+        log.info("Parsed {} points, {} visits, {} activities, {} path crumbs, {} frequent places, "
+                        + "{} frequent trips from {} segments ({} errors)",
+                points.size(), visits.size(), activities.size(), timelinePaths.size(),
+                frequentPlaces.size(), frequentTrips.size(), totalSegments, errors);
+        return new ParseResult(points, visits, activities, timelinePaths,
+                frequentPlaces, frequentTrips, totalSegments, errors, null);
+    }
+
+    // ==================== FREQUENT PLACES / TRIPS (commute patterns) ====================
+
+    /**
+     * Extract labelled frequent places (HOME / WORK / ...). Google has shipped these
+     * both at the export root ({@code frequentPlaces}) and nested under
+     * {@code userLocationProfile.frequentPlaces}, so we check both. Best-effort:
+     * unknown shapes are skipped rather than failing the import.
+     */
+    private List<ParsedFrequentPlace> parseFrequentPlaces(JsonNode root) {
+        List<ParsedFrequentPlace> out = new ArrayList<>();
+        JsonNode array = firstArray(root.path("frequentPlaces"),
+                root.path("userLocationProfile").path("frequentPlaces"));
+        if (array == null) return out;
+
+        for (JsonNode node : array) {
+            try {
+                String placeId = firstText(node.path("placeId"), node.path("identifier"));
+                String label = firstText(node.path("label"),
+                        node.path("placeLabel")); // HOME / WORK / etc.
+                double[] coords = parseAnyCoordFormat(extractCoordString(
+                        node.has("placeLocation") ? node.path("placeLocation")
+                                : node.path("centroid")));
+                Double lat = coords != null ? coords[0] : null;
+                Double lng = coords != null ? coords[1] : null;
+                if (placeId == null && lat == null) continue; // nothing usable
+                out.add(new ParsedFrequentPlace(placeId, label, lat, lng));
+            } catch (Exception e) {
+                log.debug("Skipping unparseable frequentPlace: {}", e.getMessage());
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Extract recurring trips (commute patterns). Defensive: handles the variants
+     * Google has used (root or under userLocationProfile; endpoints as placeId
+     * references or inline coordinates).
+     */
+    private List<ParsedFrequentTrip> parseFrequentTrips(JsonNode root) {
+        List<ParsedFrequentTrip> out = new ArrayList<>();
+        JsonNode array = firstArray(root.path("frequentTrips"),
+                root.path("userLocationProfile").path("frequentTrips"));
+        if (array == null) return out;
+
+        for (JsonNode node : array) {
+            try {
+                double[] origin = parseAnyCoordFormat(extractCoordString(
+                        node.has("origin") ? node.path("origin") : node.path("startLocation")));
+                double[] dest = parseAnyCoordFormat(extractCoordString(
+                        node.has("destination") ? node.path("destination") : node.path("endLocation")));
+                String originPlaceId = firstText(node.path("origin").path("placeId"),
+                        node.path("originPlaceId"));
+                String destPlaceId = firstText(node.path("destination").path("placeId"),
+                        node.path("destinationPlaceId"));
+                Integer count = node.has("tripCount") ? node.get("tripCount").asInt()
+                        : (node.has("count") ? node.get("count").asInt() : null);
+                String mode = firstText(node.path("topCandidate").path("type"),
+                        node.path("activityType"));
+                Double distance = node.has("distanceMeters") ? node.get("distanceMeters").asDouble() : null;
+
+                if (origin == null && dest == null && originPlaceId == null && destPlaceId == null) continue;
+                out.add(new ParsedFrequentTrip(
+                        origin != null ? origin[0] : null, origin != null ? origin[1] : null,
+                        dest != null ? dest[0] : null, dest != null ? dest[1] : null,
+                        originPlaceId, destPlaceId, count, mode, distance));
+            } catch (Exception e) {
+                log.debug("Skipping unparseable frequentTrip: {}", e.getMessage());
+            }
+        }
+        return out;
+    }
+
+    /** Return the first of the given nodes that is a non-empty array, else null. */
+    private JsonNode firstArray(JsonNode a, JsonNode b) {
+        if (a != null && a.isArray() && a.size() > 0) return a;
+        if (b != null && b.isArray() && b.size() > 0) return b;
+        return null;
     }
 
     /**
@@ -868,13 +957,15 @@ public class GoogleTimelineParser {
             List<ParsedVisit> visits,
             List<ParsedActivity> activities,
             List<ParsedTimelinePath> timelinePaths,
+            List<ParsedFrequentPlace> frequentPlaces,
+            List<ParsedFrequentTrip> frequentTrips,
             int totalRecords,
             int errors,
             String errorMessage
     ) {
         /** Backwards-compatible constructor for formats that only yield flat points. */
         public ParseResult(List<CreateRequest> points, int totalRecords, int errors, String errorMessage) {
-            this(points, List.of(), List.of(), List.of(), totalRecords, errors, errorMessage);
+            this(points, List.of(), List.of(), List.of(), List.of(), List.of(), totalRecords, errors, errorMessage);
         }
 
         public boolean hasError() {

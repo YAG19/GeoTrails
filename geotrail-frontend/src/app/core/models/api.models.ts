@@ -144,6 +144,82 @@ export interface ActivityDistance {
   totalDistanceM: number;
 }
 
+// ==================== Timeline (semantic segments / playback / insights) ====================
+export interface TimelineSegment {
+  id?: number;           // user_activity id for ACTIVITY (correctable); absent for VISIT
+  kind: 'VISIT' | 'ACTIVITY';
+  startTime?: string;
+  endTime?: string;
+  durationMinutes?: number;
+  type?: string;         // effective activity_type (ACTIVITY) or semantic_type (VISIT)
+  originalType?: string; // Google's original value when corrected
+  corrected: boolean;
+  startLat?: number;
+  startLng?: number;
+  endLat?: number;
+  endLng?: number;
+  distanceMeters?: number;
+  probability?: number;
+  googlePlaceId?: string;
+}
+
+export interface TimelinePathPoint {
+  lat: number;
+  lng: number;
+  recordedAt: string;
+  activityType?: string;
+}
+
+export interface DayTimeline {
+  date: string;
+  segments: TimelineSegment[];
+  path: TimelinePathPoint[];
+}
+
+export interface TransportMode {
+  mode: string;
+  distanceMeters: number;
+  totalMinutes: number;
+  count: number;
+}
+
+export interface CommuteTrip {
+  originLat?: number;
+  originLng?: number;
+  destLat?: number;
+  destLng?: number;
+  originPlaceId?: string;
+  destPlaceId?: string;
+  tripCount?: number;
+  typicalMode?: string;
+  distanceMeters?: number;
+}
+
+export interface DwellStat {
+  semanticType: string;
+  totalMinutes: number;
+  visits: number;
+}
+
+export interface LabelSuggestion {
+  lat: number;
+  lng: number;
+  suggestedName: string;
+  category?: string;
+  areaName?: string;
+  visitCount: number;
+  totalMinutes: number;
+  reasoning?: string;
+}
+
+export interface Anomaly {
+  date: string;
+  type: 'LONG_TRIP' | 'LATE_NIGHT' | 'BUSY_DAY' | 'HIGH_DISTANCE' | string;
+  title: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | string;
+}
+
 // ==================== RAG ====================
 export interface RagQueryRequest {
   question: string;
@@ -154,6 +230,15 @@ export interface RagQueryRequest {
 export interface RagQueryResponse {
   answer: string;
   sources: string[];
+}
+
+export interface NarrativeRequest {
+  from: string;
+  to: string;
+}
+
+export interface NarrativeResponse {
+  narrative: string;
 }
 
 export interface RagEmbedRequest {

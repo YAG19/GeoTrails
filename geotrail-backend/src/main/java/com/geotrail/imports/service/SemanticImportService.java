@@ -2,6 +2,8 @@ package com.geotrail.imports.service;
 
 import com.geotrail.auth.entity.User;
 import com.geotrail.imports.dto.SemanticDtos.ParsedActivity;
+import com.geotrail.imports.dto.SemanticDtos.ParsedFrequentPlace;
+import com.geotrail.imports.dto.SemanticDtos.ParsedFrequentTrip;
 import com.geotrail.imports.dto.SemanticDtos.ParsedTimelinePath;
 import com.geotrail.imports.dto.SemanticDtos.ParsedVisit;
 import lombok.RequiredArgsConstructor;
@@ -125,6 +127,74 @@ public class SemanticImportService {
         }
         int inserted = flush(sql, args);
         log.info("Imported {} timeline-path breadcrumbs for user {}", inserted, user.getUsername());
+    }
+
+    /**
+     * Auto-seed user places from the export's labelled frequent places (HOME / WORK).
+     * Deduped: a place is only created when the user has no place with the same name
+     * and none already within 150 m, so re-importing the same export is idempotent.
+     */
+    @Transactional
+    public void seedPlacesFromFrequent(User user, List<ParsedFrequentPlace> places) {
+        if (places == null || places.isEmpty()) return;
+
+        final String sql = """
+            INSERT INTO places (user_id, name, coordinates, radius_meters, category, created_at, updated_at)
+            SELECT ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326), ?, ?, NOW(), NOW()
+            WHERE NOT EXISTS (
+                SELECT 1 FROM places p
+                WHERE p.user_id = ?
+                  AND (p.name = ?
+                       OR ST_DWithin(p.coordinates::geography,
+                                     ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, 150))
+            )
+            """;
+
+        int seeded = 0;
+        for (ParsedFrequentPlace p : places) {
+            if (p.lat() == null || p.lng() == null) continue;
+            String name = labelToName(p.label());
+            String category = p.label() != null ? p.label().toLowerCase() : "frequent";
+            seeded += jdbcTemplate.update(sql,
+                    user.getId(), name, p.lng(), p.lat(), 120, category,
+                    user.getId(), name, p.lng(), p.lat());
+        }
+        log.info("Auto-seeded {} frequent places for user {}", seeded, user.getUsername());
+    }
+
+    /** Replace the user's commute-pattern snapshot with the latest export's. */
+    @Transactional
+    public void persistFrequentTrips(User user, List<ParsedFrequentTrip> trips) {
+        if (trips == null) return;
+        jdbcTemplate.update("DELETE FROM frequent_trips WHERE user_id = ?", user.getId());
+        if (trips.isEmpty()) return;
+
+        final String sql = """
+            INSERT INTO frequent_trips
+                (user_id, origin_lat, origin_lng, dest_lat, dest_lng,
+                 origin_place_id, dest_place_id, trip_count, typical_mode, distance_meters, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            """;
+
+        List<Object[]> args = new ArrayList<>();
+        for (ParsedFrequentTrip t : trips) {
+            args.add(new Object[]{
+                    user.getId(),
+                    t.originLat(), t.originLng(), t.destLat(), t.destLng(),
+                    t.originPlaceId(), t.destPlaceId(), t.tripCount(), t.typicalMode(), t.distanceMeters()
+            });
+        }
+        int inserted = flush(sql, args);
+        log.info("Imported {} frequent trips for user {}", inserted, user.getUsername());
+    }
+
+    private static String labelToName(String label) {
+        if (label == null || label.isBlank()) return "Frequent place";
+        return switch (label.toUpperCase()) {
+            case "HOME" -> "Home";
+            case "WORK" -> "Work";
+            default -> label.substring(0, 1).toUpperCase() + label.substring(1).toLowerCase();
+        };
     }
 
     /** Batch-execute {@code sql} with {@code args}, flushing every {@link #FLUSH_SIZE} rows. */

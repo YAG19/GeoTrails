@@ -43,4 +43,25 @@ public final class SemanticDtos {
             Instant segmentStart,
             Instant recordedAt
     ) {}
+
+    /** A labelled frequent place ({@code frequentPlaces[]} / userLocationProfile). */
+    public record ParsedFrequentPlace(
+            String googlePlaceId,
+            String label,        // HOME, WORK, ... — used to name an auto-seeded place
+            Double lat,
+            Double lng
+    ) {}
+
+    /** A recurring commute pattern ({@code frequentTrips[]} / userLocationProfile). */
+    public record ParsedFrequentTrip(
+            Double originLat,
+            Double originLng,
+            Double destLat,
+            Double destLng,
+            String originPlaceId,
+            String destPlaceId,
+            Integer tripCount,
+            String typicalMode,
+            Double distanceMeters
+    ) {}
 }

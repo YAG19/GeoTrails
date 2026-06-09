@@ -25,9 +25,8 @@ import { filter } from 'rxjs/operators';
 
           <!-- nav -->
           <ul class="nav-links">
-            <!-- <li><a routerLink="/map"       routerLinkActive="active"><span class="nav-icon">◈</span> Map</a></li> -->
-            <!--  <li><a routerLink="/live"      routerLinkActive="active"><span class="nav-icon live-dot"></span> Live</a></li> -->
             <li><a routerLink="/dashboard" routerLinkActive="active"><span class="nav-icon">◉</span> Dashboard</a></li>
+          <!--  <li><a routerLink="/live"      routerLinkActive="active"><span class="nav-icon live-dot"></span> Live</a></li> -->
             <li><a routerLink="/import"    routerLinkActive="active"><span class="nav-icon">↓</span> Import</a></li>
             <li><a routerLink="/places"    routerLinkActive="active"><span class="nav-icon">◆</span> Places</a></li>
             <li><a routerLink="/assistant" routerLinkActive="active"><span class="nav-icon">💬</span> Assistant</a></li>

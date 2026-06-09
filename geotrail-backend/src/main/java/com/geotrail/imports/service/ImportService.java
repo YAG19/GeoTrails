@@ -131,6 +131,8 @@ public class ImportService {
                 semanticImportService.persistVisits(user, result.visits());
                 semanticImportService.persistActivities(user, result.activities());
                 semanticImportService.persistTimelinePaths(user, result.timelinePaths());
+                semanticImportService.seedPlacesFromFrequent(user, result.frequentPlaces());
+                semanticImportService.persistFrequentTrips(user, result.frequentTrips());
             } catch (Exception e) {
                 log.error("Failed to persist semantic records for import job {}: {}", jobId, e.getMessage());
             }

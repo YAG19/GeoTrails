@@ -177,6 +177,11 @@ type LlmProvider = 'gemini' | 'ollama' | 'lmstudio';
                   </button>
                 }
               </div>
+
+              <div class="narrate-row">
+                <button class="suggestion-chip narrate" (click)="narratePeriod(7)" [disabled]="typing()">📖 Narrate my last 7 days</button>
+                <button class="suggestion-chip narrate" (click)="narratePeriod(30)" [disabled]="typing()">📖 Narrate my last 30 days</button>
+              </div>
             </div>
           }
 
@@ -518,6 +523,24 @@ type LlmProvider = 'gemini' | 'ollama' | 'lmstudio';
       color: #00e5ff;
     }
 
+    .narrate-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .suggestion-chip.narrate {
+      border-color: rgba(0, 229, 255, 0.25);
+      color: #00e5ff;
+    }
+
+    .suggestion-chip.narrate:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     /* Message Bubbles */
     .message-wrapper {
       display: flex;
@@ -832,6 +855,41 @@ export class AssistantComponent implements OnInit {
   useSuggestion(chip: string): void {
     this.userInput = chip;
     this.sendMessage();
+  }
+
+  /** AI narrative of the user's recent timeline — grounded in stored segments (no indexing needed). */
+  narratePeriod(days: number): void {
+    if (this.typing()) return;
+    const to = new Date();
+    const from = new Date();
+    from.setDate(to.getDate() - days);
+
+    this.messages.update((prev) => [...prev, {
+      sender: 'user',
+      text: `Narrate my last ${days} days`,
+      timestamp: new Date()
+    }]);
+    this.typing.set(true);
+
+    this.apiService.narrative({ from: from.toISOString(), to: to.toISOString() }).subscribe({
+      next: (res) => {
+        this.typing.set(false);
+        this.messages.update((prev) => [...prev, {
+          sender: 'assistant',
+          text: res.narrative,
+          timestamp: new Date()
+        }]);
+      },
+      error: (err) => {
+        this.typing.set(false);
+        this.messages.update((prev) => [...prev, {
+          sender: 'assistant',
+          text: '⚠️ Could not generate a narrative. Ensure the backend LLM provider is configured and you have imported a semantic Google Timeline export.',
+          timestamp: new Date()
+        }]);
+        console.error(err);
+      }
+    });
   }
 
   sendMessage(): void {

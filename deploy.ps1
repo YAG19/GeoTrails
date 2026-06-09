@@ -12,6 +12,22 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# Docker/BuildKit writes progress to stderr. Under $ErrorActionPreference="Stop",
+# Windows PowerShell turns a native command's stderr into a terminating
+# NativeCommandError and aborts the script even when docker exits 0. Run native
+# docker calls with "Continue" and rely on the explicit $LASTEXITCODE checks below.
+function Invoke-Docker {
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        # Merge stderr into stdout and stringify so docker's progress output
+        # renders as plain text instead of red NativeCommandError records.
+        & docker @args 2>&1 | ForEach-Object { "$_" }
+    } finally {
+        $ErrorActionPreference = $prev
+    }
+}
+
 # BuildKit is required for --mount=type=cache in the Dockerfile
 $env:DOCKER_BUILDKIT = "1"
 $env:COMPOSE_DOCKER_CLI_BUILD = "1"
@@ -37,16 +53,16 @@ if ($Full) {
     Write-Host "[1/2] Building backend image..." -ForegroundColor Yellow
 }
 
-docker @buildArgs
+Invoke-Docker @buildArgs
 if ($LASTEXITCODE -ne 0) { Write-Error "docker compose build failed (exit $LASTEXITCODE)"; exit 1 }
 
 # 2. Recreate changed containers
 if ($Full) {
     Write-Host "[2/3] Starting full stack..." -ForegroundColor Yellow
-    docker compose up -d --force-recreate backend frontend postgres redis prometheus grafana
+    Invoke-Docker compose up -d --force-recreate backend frontend postgres redis prometheus grafana
 } else {
     Write-Host "[2/2] Recreating backend container..." -ForegroundColor Yellow
-    docker compose up -d --force-recreate --no-deps backend
+    Invoke-Docker compose up -d --force-recreate --no-deps backend
 }
 if ($LASTEXITCODE -ne 0) { Write-Error "docker compose up failed (exit $LASTEXITCODE)"; exit 1 }
 

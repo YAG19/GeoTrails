@@ -2,7 +2,9 @@ package com.geotrail.places.controller;
 
 import com.geotrail.auth.entity.User;
 import com.geotrail.common.dto.ApiResponse;
+import com.geotrail.places.dto.LabelSuggestion;
 import com.geotrail.places.dto.PlaceDtos.*;
+import com.geotrail.places.service.PlaceLabelingService;
 import com.geotrail.places.service.PlaceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,10 +21,21 @@ import java.util.List;
 public class PlaceController {
 
     private final PlaceService placeService;
+    private final PlaceLabelingService placeLabelingService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Response>>> getPlaces(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(ApiResponse.success(placeService.getPlacesForUser(user.getId())));
+    }
+
+    /**
+     * AI-proposed names/categories for frequently visited but unlabelled locations.
+     * Read-only suggestions — the user accepts one by POSTing a normal place.
+     */
+    @GetMapping("/label-suggestions")
+    public ResponseEntity<ApiResponse<List<LabelSuggestion>>> labelSuggestions(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(placeLabelingService.suggest(user.getId())));
     }
 
     @PostMapping

@@ -28,6 +28,14 @@ public class UserActivity {
     @Column(name = "activity_type", nullable = false, length = 50)
     private String activityType;
 
+    /** User/AI override of {@link #activityType}; null means use the original. */
+    @Column(name = "corrected_activity_type", length = 50)
+    private String correctedActivityType;
+
+    /** Where the correction came from: 'manual' or 'ai'. Null when uncorrected. */
+    @Column(name = "correction_source", length = 20)
+    private String correctionSource;
+
     @Column(name = "activity_date", nullable = false)
     private LocalDate activityDate;
 

@@ -1,7 +1,39 @@
 import { Component, OnInit, Input, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
-import { DailyStat, Place } from '../../core/models/api.models';
+import { DailyStat, Place, TransportMode, CommuteTrip, DwellStat, TimelineSegment, Anomaly } from '../../core/models/api.models';
+
+/** Convert a dashboard scope token into an ISO from/to window. */
+function scopeRange(scope: string): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date();
+  switch (scope) {
+    case '1W': from.setDate(to.getDate() - 7); break;
+    case '1M': from.setMonth(to.getMonth() - 1); break;
+    case '6M': from.setMonth(to.getMonth() - 6); break;
+    case '1Y': from.setFullYear(to.getFullYear() - 1); break;
+    case '5Y': from.setFullYear(to.getFullYear() - 5); break;
+    default: from.setFullYear(2020, 0, 1); break;
+  }
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+/** Colour per transport mode — kept in sync with the playback trail palette. */
+const MODE_COLORS: Record<string, string> = {
+  WALKING: '#34d399', RUNNING: '#10b981', CYCLING: '#a78bfa',
+  IN_PASSENGER_VEHICLE: '#ff5a36', IN_VEHICLE: '#ff5a36', DRIVING: '#ff5a36',
+  IN_TAXI: '#fbbf24', MOTORCYCLING: '#f472b6',
+  IN_BUS: '#60a5fa', IN_TRAIN: '#60a5fa', IN_SUBWAY: '#60a5fa', IN_TRAM: '#60a5fa',
+  IN_FERRY: '#22d3ee', FLYING: '#f87171', IN_FLIGHT: '#f87171',
+};
+function modeColor(mode?: string | null): string {
+  if (!mode) return '#9aa0a6';
+  return MODE_COLORS[mode.toUpperCase()] ?? '#9aa0a6';
+}
+function prettyMode(mode?: string | null): string {
+  if (!mode) return 'Unknown';
+  return mode.replace(/^IN_/, '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
 
 /* ─── Top Places ────────────────────────────────── */
 @Component({
@@ -474,4 +506,405 @@ export class DashboardPolarClockComponent {
       return { d: `M${x1} ${y1}L${x2} ${y2}A${r} ${r} 0 0 1 ${x3} ${y3}L${x4} ${y4}A${rIn} ${rIn} 0 0 0 ${x1} ${y1}Z`, fill };
     });
   })();
+}
+
+/* ─── Transport Mode Breakdown (from /timeline/transport-breakdown) ─── */
+@Component({
+  selector: 'app-dashboard-transport-breakdown',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <div class="card">
+      <div class="card-head">
+        <span class="label">TRANSPORT MODES</span>
+        <span class="meta">{{ totalKm() }} km · {{ rows().length }} modes</span>
+      </div>
+      <div class="card-body no-pad">
+        @for (r of rows(); track r.mode) {
+          <div class="mode-row">
+            <div class="mode-bg" [style.width.%]="r.pct" [style.background]="r.color"></div>
+            <span class="mode-dot" [style.background]="r.color"></span>
+            <span class="mode-name">{{ r.label }}</span>
+            <span class="num mode-km">{{ r.km }} km</span>
+            <span class="num mode-min">{{ r.hours }}</span>
+          </div>
+        }
+        @if (rows().length === 0 && !loading()) {
+          <div class="empty">no travel segments — import a semantic Google Timeline export</div>
+        }
+        @if (loading()) { <div class="empty">loading…</div> }
+      </div>
+    </div>
+  `,
+  styleUrls: ['./dashboard.scss'],
+  styles: [`
+    .meta { font-size: 10.5px; color: var(--ink-4); }
+    .mode-row {
+      display: grid; grid-template-columns: 12px 1fr auto auto;
+      align-items: center; gap: 10px; padding: 9px 14px;
+      border-bottom: 1px dashed var(--line-2); position: relative;
+    }
+    .mode-bg { position: absolute; left: 0; top: 0; bottom: 0; opacity: 0.14; pointer-events: none; }
+    .mode-dot { width: 8px; height: 8px; border-radius: 50%; z-index: 1; }
+    .mode-name { font-size: 12px; color: var(--ink); z-index: 1; }
+    .mode-km { font-size: 11px; color: var(--ink-2); z-index: 1; }
+    .mode-min { font-size: 10.5px; color: var(--ink-4); z-index: 1; min-width: 52px; text-align: right; }
+    .empty { padding: 24px 14px; font-size: 11px; color: var(--ink-4); }
+  `],
+})
+export class DashboardTransportBreakdownComponent implements OnInit {
+  @Input() set scope(v: string) { this._scope = v || '6M'; this.load(); }
+  private _scope = '6M';
+  private api = inject(ApiService);
+
+  rows = signal<{ mode: string; label: string; color: string; km: string; hours: string; pct: number }[]>([]);
+  totalKm = signal('0');
+  loading = signal(true);
+
+  ngOnInit() { this.load(); }
+
+  private load() {
+    const { from, to } = scopeRange(this._scope);
+    this.loading.set(true);
+    this.api.getTransportBreakdown(from, to).subscribe({
+      next: (modes: TransportMode[]) => {
+        const maxKm = Math.max(...modes.map(m => m.distanceMeters / 1000), 1);
+        let total = 0;
+        this.rows.set(modes.map(m => {
+          const km = m.distanceMeters / 1000;
+          total += km;
+          const h = m.totalMinutes >= 60
+            ? `${(m.totalMinutes / 60).toFixed(1)}h`
+            : `${m.totalMinutes}m`;
+          return {
+            mode: m.mode, label: prettyMode(m.mode), color: modeColor(m.mode),
+            km: km.toFixed(1), hours: h, pct: (km / maxKm) * 100,
+          };
+        }));
+        this.totalKm.set(total.toFixed(0));
+        this.loading.set(false);
+      },
+      error: () => { this.rows.set([]); this.loading.set(false); },
+    });
+  }
+}
+
+/* ─── Commute Patterns (from /timeline/commute-patterns) ─── */
+@Component({
+  selector: 'app-dashboard-commute-patterns',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <div class="card">
+      <div class="card-head">
+        <span class="label">COMMUTE PATTERNS</span>
+        <span class="meta">recurring trips</span>
+      </div>
+      <div class="card-body no-pad">
+        @for (t of trips(); track $index; let i = $index) {
+          <div class="commute-row" [class.last]="i === trips().length - 1">
+            <span class="rank">{{ (i+1).toString().padStart(2,'0') }}</span>
+            <div class="commute-meta">
+              <div class="commute-route">{{ t.route }}</div>
+              <div class="commute-sub">
+                <span class="mode-dot" [style.background]="t.color"></span>{{ t.mode }}
+                @if (t.km) { · {{ t.km }} km }
+              </div>
+            </div>
+            @if (t.count) { <span class="num commute-count">{{ t.count }}×</span> }
+          </div>
+        }
+        @if (trips().length === 0 && !loading()) {
+          <div class="empty">no commute patterns — Google adds these to exports over time</div>
+        }
+        @if (loading()) { <div class="empty">loading…</div> }
+      </div>
+    </div>
+  `,
+  styleUrls: ['./dashboard.scss'],
+  styles: [`
+    .meta { font-size: 10.5px; color: var(--ink-4); }
+    .commute-row {
+      display: grid; grid-template-columns: 28px 1fr auto;
+      align-items: center; gap: 10px; padding: 9px 14px;
+      border-bottom: 1px dashed var(--line-2);
+    }
+    .commute-row.last { border-bottom: none; }
+    .rank { font-size: 10.5px; color: var(--ink-4); }
+    .commute-route { font-size: 12px; color: var(--ink); }
+    .commute-sub { font-size: 10px; color: var(--ink-4); display: flex; align-items: center; gap: 5px; }
+    .mode-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .commute-count { font-size: 12px; color: var(--accent); }
+    .empty { padding: 24px 14px; font-size: 11px; color: var(--ink-4); }
+  `],
+})
+export class DashboardCommutePatternsComponent implements OnInit {
+  private api = inject(ApiService);
+  trips = signal<{ route: string; mode: string; color: string; km?: string; count?: number }[]>([]);
+  loading = signal(true);
+
+  ngOnInit() {
+    this.api.getCommutePatterns().subscribe({
+      next: (ts: CommuteTrip[]) => {
+        this.trips.set(ts.slice(0, 6).map(t => ({
+          route: `${fmtPoint(t.originLat, t.originLng)} → ${fmtPoint(t.destLat, t.destLng)}`,
+          mode: prettyMode(t.typicalMode),
+          color: modeColor(t.typicalMode),
+          km: t.distanceMeters ? (t.distanceMeters / 1000).toFixed(1) : undefined,
+          count: t.tripCount ?? undefined,
+        })));
+        this.loading.set(false);
+      },
+      error: () => { this.trips.set([]); this.loading.set(false); },
+    });
+  }
+}
+
+function fmtPoint(lat?: number, lng?: number): string {
+  if (lat == null || lng == null) return '?';
+  return `${lat.toFixed(2)},${lng.toFixed(2)}`;
+}
+
+/* ─── Dwell Time by Place Type (from /timeline/dwell) ─── */
+@Component({
+  selector: 'app-dashboard-dwell',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <div class="card">
+      <div class="card-head">
+        <span class="label">TIME BY PLACE</span>
+        <span class="meta">home · work · other</span>
+      </div>
+      <div class="card-body no-pad">
+        @for (d of rows(); track d.type) {
+          <div class="dwell-row">
+            <div class="dwell-bg" [style.width.%]="d.pct"></div>
+            <span class="dwell-type">{{ d.label }}</span>
+            <span class="num dwell-hours">{{ d.hours }}</span>
+            <span class="num dwell-visits">{{ d.visits }} visits</span>
+          </div>
+        }
+        @if (rows().length === 0 && !loading()) {
+          <div class="empty">no visits with semantic labels yet</div>
+        }
+        @if (loading()) { <div class="empty">loading…</div> }
+      </div>
+    </div>
+  `,
+  styleUrls: ['./dashboard.scss'],
+  styles: [`
+    .meta { font-size: 10.5px; color: var(--ink-4); }
+    .dwell-row {
+      display: grid; grid-template-columns: 1fr auto auto;
+      align-items: center; gap: 12px; padding: 10px 14px;
+      border-bottom: 1px dashed var(--line-2); position: relative;
+    }
+    .dwell-bg { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent-soft); pointer-events: none; }
+    .dwell-type { font-size: 12px; color: var(--ink); z-index: 1; text-transform: capitalize; }
+    .dwell-hours { font-size: 12px; color: var(--ink-2); z-index: 1; }
+    .dwell-visits { font-size: 10px; color: var(--ink-4); z-index: 1; min-width: 64px; text-align: right; }
+    .empty { padding: 24px 14px; font-size: 11px; color: var(--ink-4); }
+  `],
+})
+export class DashboardDwellComponent implements OnInit {
+  @Input() set scope(v: string) { this._scope = v || '6M'; this.load(); }
+  private _scope = '6M';
+  private api = inject(ApiService);
+
+  rows = signal<{ type: string; label: string; hours: string; visits: number; pct: number }[]>([]);
+  loading = signal(true);
+
+  ngOnInit() { this.load(); }
+
+  private load() {
+    const { from, to } = scopeRange(this._scope);
+    this.loading.set(true);
+    this.api.getDwellStats(from, to).subscribe({
+      next: (stats: DwellStat[]) => {
+        const maxMin = Math.max(...stats.map(s => s.totalMinutes), 1);
+        this.rows.set(stats.map(s => ({
+          type: s.semanticType,
+          label: prettyMode(s.semanticType),
+          hours: s.totalMinutes >= 60 ? `${(s.totalMinutes / 60).toFixed(0)}h` : `${s.totalMinutes}m`,
+          visits: s.visits,
+          pct: (s.totalMinutes / maxMin) * 100,
+        })));
+        this.loading.set(false);
+      },
+      error: () => { this.rows.set([]); this.loading.set(false); },
+    });
+  }
+}
+
+/* ─── Trip Log (ordered segments + inline mode correction) ─── */
+@Component({
+  selector: 'app-dashboard-trip-log',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <div class="card">
+      <div class="card-head">
+        <span class="label">TRIP LOG</span>
+        <span class="meta">latest segments · tap mode to correct</span>
+      </div>
+      <div class="card-body no-pad log-scroll">
+        @for (s of segments(); track $index) {
+          <div class="log-row" [class.visit]="s.kind === 'VISIT'">
+            <span class="log-time">{{ s.startTime | date:'MM-dd HH:mm' }}</span>
+            @if (s.kind === 'ACTIVITY') {
+              <span class="log-icon" [style.color]="modeColor(s.type)">▸</span>
+              <select class="log-mode" [value]="s.type || ''" (change)="correct(s, $event)">
+                @for (m of MODES; track m) { <option [value]="m">{{ pretty(m) }}</option> }
+              </select>
+              @if (s.corrected) { <span class="log-flag" title="corrected">✎</span> }
+              <span class="num log-dist">{{ s.distanceMeters ? (s.distanceMeters/1000 | number:'1.1-1') + ' km' : '—' }}</span>
+            } @else {
+              <span class="log-icon visit-icon">◉</span>
+              <span class="log-place">{{ pretty(s.type) || 'Visit' }}</span>
+              <span class="num log-dist">{{ s.durationMinutes ? s.durationMinutes + 'm' : '' }}</span>
+            }
+          </div>
+        }
+        @if (segments().length === 0 && !loading()) {
+          <div class="empty">no segments in range — import a semantic Google Timeline export</div>
+        }
+        @if (loading()) { <div class="empty">loading…</div> }
+      </div>
+    </div>
+  `,
+  styleUrls: ['./dashboard.scss'],
+  styles: [`
+    .meta { font-size: 10.5px; color: var(--ink-4); }
+    .log-scroll { max-height: 320px; overflow-y: auto; }
+    .log-row {
+      display: grid; grid-template-columns: 84px 14px 1fr auto;
+      align-items: center; gap: 8px; padding: 7px 14px;
+      border-bottom: 1px dashed var(--line-2); font-size: 11.5px;
+    }
+    .log-row.visit { background: color-mix(in oklab, var(--bg-2) 50%, transparent); }
+    .log-time { color: var(--ink-4); font-size: 10px; }
+    .log-icon { text-align: center; }
+    .visit-icon { color: var(--ink-3); }
+    .log-mode {
+      background: transparent; border: 1px solid var(--line); color: var(--ink);
+      font-family: inherit; font-size: 11px; padding: 1px 4px; cursor: pointer; max-width: 100%;
+    }
+    .log-place { color: var(--ink-2); }
+    .log-flag { color: var(--accent); font-size: 10px; margin-left: 4px; }
+    .log-dist { text-align: right; color: var(--ink-3); font-size: 10.5px; }
+    .empty { padding: 24px 14px; font-size: 11px; color: var(--ink-4); }
+  `],
+})
+export class DashboardTripLogComponent implements OnInit {
+  @Input() set scope(v: string) { this._scope = v || '6M'; this.load(); }
+  private _scope = '6M';
+  private api = inject(ApiService);
+
+  readonly MODES = ['WALKING', 'RUNNING', 'CYCLING', 'IN_PASSENGER_VEHICLE', 'IN_TAXI',
+    'MOTORCYCLING', 'IN_BUS', 'IN_TRAIN', 'IN_SUBWAY', 'IN_FERRY', 'FLYING'];
+
+  segments = signal<TimelineSegment[]>([]);
+  loading = signal(true);
+  modeColor = modeColor;
+  pretty = prettyMode;
+
+  ngOnInit() { this.load(); }
+
+  private load() {
+    const { from, to } = scopeRange(this._scope);
+    this.loading.set(true);
+    this.api.getTimelineSegments(from, to).subscribe({
+      next: (segs: TimelineSegment[]) => {
+        // newest first, cap for the rail
+        this.segments.set([...segs].reverse().slice(0, 60));
+        this.loading.set(false);
+      },
+      error: () => { this.segments.set([]); this.loading.set(false); },
+    });
+  }
+
+  correct(seg: TimelineSegment, e: Event) {
+    const newType = (e.target as HTMLSelectElement).value;
+    if (!seg.id || newType === seg.type) return;
+    this.api.correctSegment(seg.id, newType).subscribe({
+      next: (updated) => {
+        this.segments.update(list => list.map(s => s.id === updated.id ? updated : s));
+      },
+      error: () => { /* leave the select; user can retry */ },
+    });
+  }
+}
+
+/* ─── Notable / Anomalies (from /stats/anomalies) ─── */
+@Component({
+  selector: 'app-dashboard-notable',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <div class="card">
+      <div class="card-head">
+        <span class="label">NOTABLE</span>
+        <span class="meta">unusual days & trips</span>
+      </div>
+      <div class="card-body no-pad">
+        @for (a of anomalies(); track $index; let i = $index) {
+          <div class="notable-row" [class.last]="i === anomalies().length - 1">
+            <span class="sev-dot" [style.background]="sevColor(a.severity)"></span>
+            <div class="notable-meta">
+              <div class="notable-title">{{ a.title }}</div>
+              <div class="notable-desc">{{ a.description }}</div>
+            </div>
+            <span class="notable-date">{{ a.date }}</span>
+          </div>
+        }
+        @if (anomalies().length === 0 && !loading()) {
+          <div class="empty">nothing unusual in this range</div>
+        }
+        @if (loading()) { <div class="empty">scanning…</div> }
+      </div>
+    </div>
+  `,
+  styleUrls: ['./dashboard.scss'],
+  styles: [`
+    .meta { font-size: 10.5px; color: var(--ink-4); }
+    .notable-row {
+      display: grid; grid-template-columns: 10px 1fr auto;
+      align-items: start; gap: 10px; padding: 10px 14px;
+      border-bottom: 1px dashed var(--line-2);
+    }
+    .notable-row.last { border-bottom: none; }
+    .sev-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; }
+    .notable-title { font-size: 12px; color: var(--ink); }
+    .notable-desc { font-size: 10.5px; color: var(--ink-4); margin-top: 2px; }
+    .notable-date { font-size: 10px; color: var(--ink-3); white-space: nowrap; }
+    .empty { padding: 24px 14px; font-size: 11px; color: var(--ink-4); }
+  `],
+})
+export class DashboardNotableComponent implements OnInit {
+  @Input() set scope(v: string) { this._scope = v || '6M'; this.load(); }
+  private _scope = '6M';
+  private api = inject(ApiService);
+
+  anomalies = signal<Anomaly[]>([]);
+  loading = signal(true);
+
+  ngOnInit() { this.load(); }
+
+  private load() {
+    const { from, to } = scopeRange(this._scope);
+    this.loading.set(true);
+    this.api.getAnomalies(from, to).subscribe({
+      next: (a) => { this.anomalies.set(a); this.loading.set(false); },
+      error: () => { this.anomalies.set([]); this.loading.set(false); },
+    });
+  }
+
+  sevColor(sev: string): string {
+    switch (sev) {
+      case 'high': return '#f87171';
+      case 'medium': return '#fbbf24';
+      default: return '#60a5fa';
+    }
+  }
 }

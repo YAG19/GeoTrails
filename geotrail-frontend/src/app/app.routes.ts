@@ -22,18 +22,14 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-      // {
-      //   path: 'map',
-      //   loadComponent: () =>
-      //     import('./features/map/map.component').then((m) => m.MapComponent),
-      // },
-      // {
-      //   path: 'live',
-      //   loadComponent: () =>
-      //     import('./features/live-tracking/live-tracking.component').then(
-      //       (m) => m.LiveTrackingComponent,
-      //     ),
-      // },
+      // Note: the standalone '/map' view is superseded by the dashboard (heatmap + playback).
+      {
+        path: 'live',
+        loadComponent: () =>
+          import('./features/live-tracking/live-tracking.component').then(
+            (m) => m.LiveTrackingComponent,
+          ),
+      },
       {
         path: 'dashboard',
         loadComponent: () =>

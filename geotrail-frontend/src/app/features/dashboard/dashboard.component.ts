@@ -4,12 +4,18 @@ import { CommonModule } from '@angular/common';
 import { DashboardTopbarComponent }         from './dashboard-topbar.component';
 import { DashboardStatStripComponent }      from './dashboard-stat-strip.component';
 import { DashboardMapComponent }            from './dashboard-map.component';
+import { DashboardPlaybackComponent }       from './dashboard-playback.component';
 import {
   DashboardTopPlacesComponent,
   DashboardDistanceChartComponent,
   DashboardActivityCalendarComponent,
   DashboardRecentTrailsComponent,
   DashboardPolarClockComponent,
+  DashboardTransportBreakdownComponent,
+  DashboardCommutePatternsComponent,
+  DashboardDwellComponent,
+  DashboardTripLogComponent,
+  DashboardNotableComponent,
 } from './dashboard-modules.component';
 
 /**
@@ -29,11 +35,17 @@ import {
     DashboardTopbarComponent,
     DashboardStatStripComponent,
     DashboardMapComponent,
+    DashboardPlaybackComponent,
     DashboardTopPlacesComponent,
     DashboardDistanceChartComponent,
     DashboardActivityCalendarComponent,
     DashboardRecentTrailsComponent,
     DashboardPolarClockComponent,
+    DashboardTransportBreakdownComponent,
+    DashboardCommutePatternsComponent,
+    DashboardDwellComponent,
+    DashboardTripLogComponent,
+    DashboardNotableComponent,
   ],
   template: `
     <div class="dash-root">
@@ -53,10 +65,24 @@ import {
       <!-- main content: map left, modules rail right -->
       <div class="dash-content">
         <div class="dash-map-col">
-          <app-dashboard-map [scope]="scope()" [filter]="filter()"></app-dashboard-map> 
-         </div> 
+          <!-- view toggle: static heatmap vs animated playback -->
+          <div class="view-toggle">
+            <button class="vt-btn" [class.on]="mapMode() === 'map'" (click)="mapMode.set('map')">▦ heatmap</button>
+            <button class="vt-btn" [class.on]="mapMode() === 'playback'" (click)="mapMode.set('playback')">▶ playback</button>
+          </div>
+          @if (mapMode() === 'map') {
+            <app-dashboard-map [scope]="scope()" [filter]="filter()"></app-dashboard-map>
+          } @else {
+            <app-dashboard-playback [scope]="scope()" [filter]="filter()"></app-dashboard-playback>
+          }
+         </div>
         <div class="dash-rail">
           <app-dashboard-top-places></app-dashboard-top-places>
+          <app-dashboard-notable [scope]="scope()"></app-dashboard-notable>
+          <app-dashboard-transport-breakdown [scope]="scope()"></app-dashboard-transport-breakdown>
+          <app-dashboard-trip-log [scope]="scope()"></app-dashboard-trip-log>
+          <app-dashboard-commute-patterns></app-dashboard-commute-patterns>
+          <app-dashboard-dwell [scope]="scope()"></app-dashboard-dwell>
           <app-dashboard-distance-chart></app-dashboard-distance-chart>
           <app-dashboard-activity-calendar></app-dashboard-activity-calendar>
           <app-dashboard-polar-clock></app-dashboard-polar-clock>
@@ -98,6 +124,13 @@ import {
       overflow: hidden;
     }
 
+    .view-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+    .vt-btn {
+      padding: 3px 10px; background: transparent; border: 1px solid var(--line);
+      color: var(--ink-3); font-family: inherit; font-size: 11px; cursor: pointer;
+    }
+    .vt-btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
     .dash-rail {
       overflow-y: auto;
       padding: 14px 14px 14px 7px;
@@ -119,6 +152,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   scope = signal('6M');
   theme = signal<'dark' | 'light'>('dark');
   filter = signal('all');
+  mapMode = signal<'map' | 'playback'>('map');
 
   private prevBodyTheme: string | null = null;
 
