@@ -92,7 +92,8 @@ if ($ready) {
 
 Write-Host ""
 Write-Host "=== Done ===" -ForegroundColor Cyan
-Write-Host "  Backend : http://localhost:8080/api"
-Write-Host "  Swagger : http://localhost:8080/api/swagger-ui.html"
-Write-Host "  Grafana : http://localhost:3000"
+Write-Host "  Backend  : http://localhost:8080/api"
+Write-Host "  Frontend : http://localhost:4000"
+Write-Host "  Swagger  : http://localhost:8080/api/swagger-ui.html"
+Write-Host "  Grafana  : http://localhost:3000"
 Write-Host ""

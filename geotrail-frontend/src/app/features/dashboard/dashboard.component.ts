@@ -17,6 +17,12 @@ import {
   DashboardTripLogComponent,
   DashboardNotableComponent,
 } from './dashboard-modules.component';
+import {
+  DashboardRecordsComponent,
+  DashboardWeeklyRhythmComponent,
+  DashboardFootprintComponent,
+  DashboardExplorationComponent,
+} from './dashboard-insights.component';
 
 /**
  * DashboardComponent
@@ -46,6 +52,10 @@ import {
     DashboardDwellComponent,
     DashboardTripLogComponent,
     DashboardNotableComponent,
+    DashboardRecordsComponent,
+    DashboardWeeklyRhythmComponent,
+    DashboardFootprintComponent,
+    DashboardExplorationComponent,
   ],
   template: `
     <div class="dash-root">
@@ -77,16 +87,20 @@ import {
           }
          </div>
         <div class="dash-rail">
-          <app-dashboard-top-places></app-dashboard-top-places>
+          <app-dashboard-records [scope]="scope()"></app-dashboard-records>
           <app-dashboard-notable [scope]="scope()"></app-dashboard-notable>
           <app-dashboard-transport-breakdown [scope]="scope()"></app-dashboard-transport-breakdown>
-          <app-dashboard-trip-log [scope]="scope()"></app-dashboard-trip-log>
+          <app-dashboard-footprint [scope]="scope()"></app-dashboard-footprint>
+          <app-dashboard-exploration [scope]="scope()"></app-dashboard-exploration>
+          <app-dashboard-top-places></app-dashboard-top-places>
+          <app-dashboard-trip-log class="rail-span" [scope]="scope()"></app-dashboard-trip-log>
           <app-dashboard-commute-patterns></app-dashboard-commute-patterns>
           <app-dashboard-dwell [scope]="scope()"></app-dashboard-dwell>
-          <app-dashboard-distance-chart></app-dashboard-distance-chart>
-          <app-dashboard-activity-calendar></app-dashboard-activity-calendar>
-          <app-dashboard-polar-clock></app-dashboard-polar-clock>
-          <app-dashboard-recent-trails></app-dashboard-recent-trails>
+          <app-dashboard-polar-clock [scope]="scope()"></app-dashboard-polar-clock>
+          <app-dashboard-weekly-rhythm [scope]="scope()"></app-dashboard-weekly-rhythm>
+          <app-dashboard-distance-chart class="rail-span"></app-dashboard-distance-chart>
+          <app-dashboard-activity-calendar class="rail-span"></app-dashboard-activity-calendar>
+          <app-dashboard-recent-trails class="rail-span"></app-dashboard-recent-trails>
         </div>
       </div>
     </div>
@@ -134,10 +148,17 @@ import {
     .dash-rail {
       overflow-y: auto;
       padding: 14px 14px 14px 7px;
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: 1fr;
       gap: 14px;
+      align-content: start;
       border-left: 1px solid var(--line);
+    }
+
+    /* Wide viewports: two-column rail, charts span both */
+    @media (min-width: 1640px) {
+      .dash-rail { grid-template-columns: 1fr 1fr; }
+      .dash-rail > .rail-span { grid-column: 1 / -1; }
     }
 
     /* Narrow viewports: stack map above modules */

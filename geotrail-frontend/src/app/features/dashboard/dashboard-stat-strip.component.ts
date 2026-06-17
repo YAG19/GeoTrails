@@ -1,7 +1,7 @@
 import { Component, OnInit, Input, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
-import { DashboardSummary } from '../../core/models/api.models';
+import { DashboardSummary, DailyStat, TransportMode } from '../../core/models/api.models';
 
 interface StatItem {
   label: string;
@@ -9,6 +9,14 @@ interface StatItem {
   unit: string;
   delta: string;
 }
+
+/** Short display names so mode fits the big stat font. */
+const SHORT_MODE: Record<string, string> = {
+  WALKING: 'Walk', RUNNING: 'Run', CYCLING: 'Cycle', HIKING: 'Hike', ON_FOOT: 'Walk',
+  IN_PASSENGER_VEHICLE: 'Car', IN_VEHICLE: 'Car', DRIVING: 'Car', IN_TAXI: 'Taxi',
+  MOTORCYCLING: 'Moto', IN_BUS: 'Bus', IN_TRAIN: 'Train', IN_SUBWAY: 'Metro',
+  IN_TRAM: 'Tram', IN_FERRY: 'Ferry', FLYING: 'Flight', IN_FLIGHT: 'Flight',
+};
 
 @Component({
   selector: 'app-dashboard-stat-strip',
@@ -47,12 +55,18 @@ interface StatItem {
     .stat-value { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; }
     .stat-unit { font-size: 11px; color: var(--ink-3); }
     .stat-delta { font-size: 10px; color: var(--ink-4); margin-top: 2px; }
+
+    @media (max-width: 1280px) {
+      .stat-strip { grid-template-columns: repeat(3, 1fr); }
+      .stat-cell { border-bottom: 1px solid var(--line); }
+      .stat-cell:nth-child(3n) { border-right: none; }
+      .stat-cell:nth-child(n+4) { border-bottom: none; }
+    }
   `],
 })
 export class DashboardStatStripComponent implements OnInit {
   private api = inject(ApiService);
 
-  private allTimeSummary: DashboardSummary | null = null;
   private _scope: string = '6M';
   private initialized = false;
 
@@ -68,7 +82,8 @@ export class DashboardStatStripComponent implements OnInit {
     { label: 'DIST THIS YEAR', value: '—', unit: 'km', delta: 'loading…' },
     { label: 'DIST LAST 30D', value: '—', unit: 'km', delta: 'loading…' },
     { label: 'POINTS SCOPE', value: '—', unit: 'pts', delta: 'loading…' },
-    { label: 'COUNTRIES', value: '—', unit: '', delta: '' },
+    { label: 'ACTIVE DAYS', value: '—', unit: '', delta: 'loading…' },
+    { label: 'TOP MODE', value: '—', unit: '', delta: 'loading…' },
   ]);
 
   ngOnInit() {
@@ -82,20 +97,29 @@ export class DashboardStatStripComponent implements OnInit {
     const fromStr = from.split('T')[0];
     const toStr = to.split('T')[0];
 
+    const daysInScope = Math.max(1, Math.round(
+      (new Date(to).getTime() - new Date(from).getTime()) / 86400000));
+
     this.api.getDashboardSummary(fromStr, toStr, currentYear).subscribe({
       next: (s: DashboardSummary) => {
-        this.allTimeSummary = s;
+        const scopeKm = s.distanceLast30DaysM / 1000; // backend scopes this to from/to
         this.stats.update(prev => [
-          { ...prev[0], value: this.fmt(s.totalPointsAllTime), delta: `+${this.fmt(s.pointsLast30Days)} last 30d` },
-          { ...prev[1], value: (s.distanceThisYearM / 1000).toFixed(0), delta: `${s.distanceThisYearM.toFixed(0)} m` },
-          { ...prev[2], value: (s.distanceLast30DaysM / 1000).toFixed(1), delta: `${s.distanceLast30DaysM.toFixed(0)} m` },
+          { ...prev[0], value: this.fmt(s.totalPointsAllTime), delta: `+${this.fmt(s.pointsLast30Days)} in scope` },
+          { ...prev[1], value: (s.distanceThisYearM / 1000).toFixed(0), delta: `${currentYear}` },
+          {
+            label: `DIST · ${label}`,
+            value: scopeKm >= 1000 ? scopeKm.toFixed(0) : scopeKm.toFixed(1),
+            unit: 'km',
+            delta: `${(scopeKm / daysInScope).toFixed(1)} km/day avg`,
+          },
           {
             label: `POINTS · ${label}`,
             value: this.fmt(s.pointsLast30Days),
             unit: 'pts',
-            delta: `${(s.distanceLast30DaysM / 1000).toFixed(1)} km`,
+            delta: `${this.fmt(Math.round(s.pointsLast30Days / daysInScope))}/day avg`,
           },
           prev[4],
+          prev[5],
         ]);
       },
       error: () => {
@@ -104,9 +128,45 @@ export class DashboardStatStripComponent implements OnInit {
           { label: 'LOCATION POINTS', value: '8.4', unit: 'M', delta: '+82.4k last 30d' },
           { label: 'TRAILS RECORDED', value: '2,194', unit: '', delta: '+14 this week' },
           { label: 'DAYS TRACKED', value: '1,827', unit: '', delta: '98.7% coverage' },
-          { label: 'COUNTRIES', value: '14', unit: '', delta: '4 continents' },
+          { label: 'ACTIVE DAYS', value: '312', unit: 'of 365', delta: '85% coverage' },
+          { label: 'TOP MODE', value: 'Car', unit: '', delta: '4,210 km' },
         ]);
       },
+    });
+
+    // Active-day coverage over the scope window (from precomputed daily stats).
+    this.api.getDailyStats(fromStr, toStr).subscribe({
+      next: (days: DailyStat[]) => {
+        const active = days.filter(d => (d.totalDistanceKm ?? 0) > 0.1).length;
+        this.stats.update(prev => prev.map((s, i) => i === 4 ? {
+          label: 'ACTIVE DAYS',
+          value: String(active),
+          unit: `of ${daysInScope}`,
+          delta: `${((active / daysInScope) * 100).toFixed(0)}% coverage`,
+        } : s));
+      },
+      error: () => {},
+    });
+
+    // Dominant transport mode over the scope window.
+    this.api.getTransportBreakdown(from, to).subscribe({
+      next: (modes: TransportMode[]) => {
+        if (!modes.length) {
+          this.stats.update(prev => prev.map((s, i) => i === 5 ? {
+            label: 'TOP MODE', value: '—', unit: '', delta: 'no segments in scope',
+          } : s));
+          return;
+        }
+        const top = modes[0]; // already sorted by distance desc
+        const name = SHORT_MODE[top.mode?.toUpperCase()] ?? (top.mode ?? '—');
+        this.stats.update(prev => prev.map((s, i) => i === 5 ? {
+          label: 'TOP MODE',
+          value: name,
+          unit: '',
+          delta: `${(top.distanceMeters / 1000).toFixed(0)} km · ${top.count} trips`,
+        } : s));
+      },
+      error: () => {},
     });
   }
 

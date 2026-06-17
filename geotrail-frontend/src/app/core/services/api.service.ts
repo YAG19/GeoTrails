@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../auth/auth.service';
 import {
   ApiResponse,
   LocationPoint,
@@ -20,6 +21,7 @@ import {
   RagQueryResponse,
   RagEmbedRequest,
   RagEmbedResponse,
+  RagEmbedEvent,
   DayTimeline,
   TimelineSegment,
   TimelinePathPoint,
@@ -36,7 +38,7 @@ import {
 export class ApiService {
   private readonly baseUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private auth: AuthService) {}
 
   // ==================== RAG / AI Assistant ====================
 
@@ -53,6 +55,75 @@ export class ApiService {
   triggerRagEmbedding(request: RagEmbedRequest): Observable<RagEmbedResponse> {
     return this.http
       .post<RagEmbedResponse>(`${this.baseUrl}/rag/embed`, request);
+  }
+
+  /**
+   * Streaming variant of {@link triggerRagEmbedding}. Opens POST /rag/embed/stream and emits each
+   * Server-Sent Event as indexing progresses, completing the observable when the backend finishes
+   * (a {@code complete} event arrives) so the caller is notified the moment indexing is done.
+   *
+   * Uses {@code fetch} rather than EventSource because EventSource cannot send the Authorization
+   * header; unsubscribing aborts the in-flight request.
+   */
+  streamRagEmbedding(request: RagEmbedRequest): Observable<RagEmbedEvent> {
+    return new Observable<RagEmbedEvent>((subscriber) => {
+      const controller = new AbortController();
+      const token = this.auth.getAccessToken();
+
+      fetch(`${this.baseUrl}/rag/embed/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(request),
+        signal: controller.signal,
+      })
+        .then(async (resp) => {
+          if (!resp.ok || !resp.body) {
+            subscriber.error(new Error(`Embed stream failed: HTTP ${resp.status}`));
+            return;
+          }
+
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          // SSE frames are separated by a blank line; each frame may carry `event:` and `data:` lines.
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            let sep: number;
+            while ((sep = buffer.indexOf('\n\n')) !== -1) {
+              const frame = buffer.slice(0, sep);
+              buffer = buffer.slice(sep + 2);
+              const data = frame
+                .split('\n')
+                .filter((line) => line.startsWith('data:'))
+                .map((line) => line.slice(5).trim())
+                .join('\n');
+              if (data) {
+                try {
+                  subscriber.next(JSON.parse(data) as RagEmbedEvent);
+                } catch {
+                  // Ignore keep-alive comments or malformed frames.
+                }
+              }
+            }
+          }
+          subscriber.complete();
+        })
+        .catch((err) => {
+          if (!controller.signal.aborted) {
+            subscriber.error(err);
+          }
+        });
+
+      return () => controller.abort();
+    });
   }
 
   narrative(request: NarrativeRequest): Observable<NarrativeResponse> {
@@ -153,7 +224,8 @@ export class ApiService {
   // ==================== Activity ====================
   getDistinctAtctivity(): Observable<string[]> {
     return this.http
-      .get<string[]>(`${this.baseUrl}/locations/activity-type`)
+      .get<ApiResponse<string[]>>(`${this.baseUrl}/locations/activity-type`)
+      .pipe(map((res) => res.data));
   }
 
   // ==================== Places ====================

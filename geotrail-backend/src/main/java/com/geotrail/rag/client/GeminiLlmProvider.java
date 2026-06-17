@@ -41,13 +41,13 @@ public class GeminiLlmProvider implements LlmProvider {
             - Only use information from the provided records. Do not infer or hallucinate.
             - If the records do not contain enough information, say so clearly.
             - Be concise. Respond in 2-4 sentences unless detail is explicitly requested.
-            - Always mention the specific dates and times from the records IF ASKED.
             - Never say "according to your data" — speak directly: "You were at home...".
             - Don't answer only in coordinates; mention the place name too.
 
             Location Records:
             %s
             """;
+    //            - Always mention the specific dates and times from the records IF ASKED.
 
     private final RestClient restClient;
     private final String model;

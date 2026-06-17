@@ -132,7 +132,7 @@ export class DashboardPlaybackComponent implements AfterViewInit, OnDestroy {
   /** Index steps advanced per real second at 1× speed. */
   private static readonly BASE_RATE = 40;
 
-  readonly speeds = [1, 4, 16, 60];
+  readonly speeds = [0.25, 0.5, 1, 4, 16, 60];
 
   private _scope = 'ALL';
   private _filter = 'all';

@@ -71,7 +71,7 @@ function prettyMode(mode?: string | null): string {
     .meta { font-size: 10.5px; color: var(--ink-4); }
     .place-row {
       display: grid; grid-template-columns: 28px 1fr auto;
-      align-items: center; gap: 12;
+      align-items: center; gap: 12px;
       padding: 9px 14px;
       border-bottom: 1px dashed var(--line-2);
       position: relative; cursor: default;
@@ -139,12 +139,12 @@ export class DashboardTopPlacesComponent implements OnInit {
           }
           @for (v of bars(); track $index; let i = $index) {
             <div class="bar" [style.height.%]="(v / maxVal()) * 100"
-                 [class.cur]="i >= 12" [title]="v + 'km'"></div>
+                 [class.cur]="i === bars().length - 1" [title]="v.toFixed(0) + ' km'"></div>
           }
         </div>
         <div class="chart-labels">
-          @for (m of monthLabels; track m) { <div>{{ m }}</div> }
-        </div>  
+          @for (m of monthLabels(); track $index) { <div>{{ m }}</div> }
+        </div>
       </div>
     </div>
   `,
@@ -180,40 +180,51 @@ export class DashboardTopPlacesComponent implements OnInit {
 export class  DashboardDistanceChartComponent implements OnInit {
   private api = inject(ApiService);
 
-  bars    = signal<number[]>(Array(24).fill(0));
+  bars    = signal<number[]>(Array(12).fill(0));
   maxVal  = signal(1);
   peak    = signal('—');
   avg     = signal('—');
   chartLabel = signal('last 12 months');
-  monthLabels = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  monthLabels = signal<string[]>([]);
+
+  private static readonly MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
   ngOnInit() {
     const to = new Date();
     const from = new Date(); from.setMonth(from.getMonth() - 11);
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
+    // Pre-seed all 12 month buckets so months without data still get a slot + label.
+    const byMonth = new Map<string, number>();
+    const cursor = new Date(from);
+    for (let i = 0; i < 12; i++) {
+      byMonth.set(cursor.toISOString().slice(0, 7), 0);
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+
     this.api.getDailyStats(fmt(from), fmt(to)).subscribe({
       next: (days: DailyStat[]) => {
-        // aggregate by month
-        const byMonth = new Map<string, number>();
         days.forEach(d => {
           const key = d.statDate.slice(0, 7); // YYYY-MM
-          byMonth.set(key, (byMonth.get(key) ?? 0) + d.totalDistanceKm);
+          if (byMonth.has(key)) byMonth.set(key, (byMonth.get(key) ?? 0) + d.totalDistanceKm);
         });
-        const vals = Array.from(byMonth.values()).slice(-24);
+        const keys = Array.from(byMonth.keys());
+        const vals = keys.map(k => byMonth.get(k)!);
         const maxV = Math.max(...vals, 1);
         const avgV = vals.reduce((a, b) => a + b, 0) / (vals.length || 1);
         this.bars.set(vals);
+        this.monthLabels.set(keys.map(k => DashboardDistanceChartComponent.MONTHS[+k.slice(5, 7) - 1]));
         this.maxVal.set(maxV);
         this.peak.set(maxV.toFixed(0));
         this.avg.set(avgV.toFixed(0));
       },
       error: () => {
         // mock
-        const mock = [180,220,310,425,580,612,540,488,410,350,280,245,260,320,415,510,640,720,680,590,480,395,310,280];
+        const mock = [180,220,310,425,580,612,540,488,410,350,280,245];
         this.bars.set(mock);
+        this.monthLabels.set(Array.from(byMonth.keys()).map(k => DashboardDistanceChartComponent.MONTHS[+k.slice(5, 7) - 1]));
         this.maxVal.set(Math.max(...mock));
-        this.peak.set('720'); this.avg.set('421');
+        this.peak.set('612'); this.avg.set('404');
       },
     });
   }
@@ -249,7 +260,7 @@ export class  DashboardDistanceChartComponent implements OnInit {
         </div>
         <div class="cal-footer">
           <div class="cal-months">
-            <span>Apr 2025</span><span>Jul</span><span>Oct</span><span>Jan 2026</span><span>Apr</span>
+            @for (m of monthMarks(); track $index) { <span>{{ m }}</span> }
           </div>
           <div class="cal-legend">
             <span>less</span>
@@ -284,12 +295,22 @@ export class DashboardActivityCalendarComponent implements OnInit {
 
   cells      = signal<number[][]>([]);
   activeDays = signal(0);
+  monthMarks = signal<string[]>([]);
   cellColors = ['var(--line-2)', 'rgba(255,90,54,0.25)', 'rgba(255,90,54,0.5)', 'rgba(255,90,54,0.75)', 'var(--accent)'];
 
   ngOnInit() {
     const to = new Date();
     const from = new Date(); from.setFullYear(from.getFullYear() - 1);
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
+
+    // Footer marks at quarter intervals across the 52-week grid.
+    const marks: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(from); d.setMonth(d.getMonth() + i * 3);
+      const month = d.toLocaleDateString('en', { month: 'short' });
+      marks.push(i === 0 || d.getMonth() === 0 ? `${month} ${d.getFullYear()}` : month);
+    }
+    this.monthMarks.set(marks);
 
     this.api.getDailyStats(fmt(from), fmt(to)).subscribe({
       next: (days: DailyStat[]) => {
@@ -427,7 +448,7 @@ export class DashboardRecentTrailsComponent implements OnInit {
   }
 }
 
-/* ─── Polar Clock (mock — no backend support) ──── */
+/* ─── Polar Clock (real hourly movement from /timeline/segments) ──── */
 @Component({
   selector: 'app-dashboard-polar-clock',
   standalone: true,
@@ -436,7 +457,7 @@ export class DashboardRecentTrailsComponent implements OnInit {
     <div class="card">
       <div class="card-head">
         <span class="label">TIME OF DAY</span>
-        <span class="meta">activity distribution · 24h</span>
+        <span class="meta">movement by hour · local time</span>
       </div>
       <div class="card-body polar-body">
         <svg [attr.viewBox]="'0 0 180 180'" width="180" height="180" style="flex-shrink:0">
@@ -444,7 +465,7 @@ export class DashboardRecentTrailsComponent implements OnInit {
             fill="none" stroke="var(--line)" stroke-dasharray="2 2"/>
           <circle [attr.cx]="cx" [attr.cy]="cy" [attr.r]="rMax"
             fill="none" stroke="var(--line)"/>
-          @for (seg of segments; track $index) {
+          @for (seg of segments(); track $index) {
             <path [attr.d]="seg.d" [attr.fill]="seg.fill" stroke="var(--bg-2)" stroke-width="0.5"/>
           }
           @for (h of [0,6,12,18]; track h) {
@@ -458,10 +479,16 @@ export class DashboardRecentTrailsComponent implements OnInit {
           }
         </svg>
         <div class="polar-stats">
-          <div class="p-row"><span>peak hour</span><span class="num">08:00–09:00</span></div>
-          <div class="p-row"><span>quiet hour</span><span class="num">03:00–04:00</span></div>
-          <div class="p-row"><span>morning %</span><span class="num">34.2%</span></div>
-          <div class="p-row"><span>weekend shift</span><span class="num">+2.4h later</span></div>
+          @if (hasData()) {
+            <div class="p-row"><span>peak hour</span><span class="num">{{ peakHour() }}</span></div>
+            <div class="p-row"><span>quiet hour</span><span class="num">{{ quietHour() }}</span></div>
+            <div class="p-row"><span>morning share</span><span class="num">{{ morningPct() }}</span></div>
+            <div class="p-row"><span>weekend shift</span><span class="num">{{ weekendShift() }}</span></div>
+          } @else if (!loading()) {
+            <div class="empty">no travel segments in range</div>
+          } @else {
+            <div class="empty">loading…</div>
+          }
         </div>
       </div>
     </div>
@@ -478,23 +505,92 @@ export class DashboardRecentTrailsComponent implements OnInit {
       color: var(--ink-3);
     }
     .p-row .num { color: var(--ink); }
+    .empty { font-size: 11px; color: var(--ink-4); }
   `],
 })
-export class DashboardPolarClockComponent {
+export class DashboardPolarClockComponent implements OnInit {
+  @Input() set scope(v: string) { this._scope = v || '6M'; if (this.initialized) this.load(); }
+  private _scope = '6M';
+  private initialized = false;
+  private api = inject(ApiService);
+
   cx = 90; cy = 90; rIn = 28; rMax = 78;
   Math = Math;
 
-  segments = (() => {
-    let x = 12;
-    const rng = () => (x = (x * 9301 + 49297) % 233280) / 233280;
-    const data = Array.from({ length: 24 }, (_, i) => {
-      const r = rng();
-      const commute = (i === 8 || i === 9 || i === 17 || i === 18) ? 0.4 : 0;
-      const night = i <= 5 ? -0.4 : 0;
-      return Math.max(0.05, r + commute + night);
+  segments = signal<{ d: string; fill: string }[]>([]);
+  peakHour = signal('—');
+  quietHour = signal('—');
+  morningPct = signal('—');
+  weekendShift = signal('—');
+  hasData = signal(false);
+  loading = signal(true);
+
+  ngOnInit() { this.initialized = true; this.load(); }
+
+  private load() {
+    const { from, to } = scopeRange(this._scope);
+    this.loading.set(true);
+    this.api.getTimelineSegments(from, to).subscribe({
+      next: (segs: TimelineSegment[]) => {
+        const hourly = Array(24).fill(0);          // movement minutes per local hour
+        const weekday = Array(24).fill(0);
+        const weekend = Array(24).fill(0);
+
+        for (const s of segs) {
+          if (s.kind !== 'ACTIVITY' || !s.startTime || !s.endTime) continue;
+          let cur = new Date(s.startTime);
+          const end = new Date(s.endTime);
+          // Spread the segment's minutes across the local hours it covers (cap 48 steps).
+          for (let i = 0; i < 48 && cur < end; i++) {
+            const hourEnd = new Date(cur); hourEnd.setMinutes(60, 0, 0);
+            const sliceEnd = hourEnd < end ? hourEnd : end;
+            const mins = (sliceEnd.getTime() - cur.getTime()) / 60000;
+            const h = cur.getHours();
+            hourly[h] += mins;
+            const dow = cur.getDay();
+            (dow === 0 || dow === 6 ? weekend : weekday)[h] += mins;
+            cur = sliceEnd;
+          }
+        }
+
+        const total = hourly.reduce((a, b) => a + b, 0);
+        this.hasData.set(total > 0);
+        this.segments.set(this.toPaths(hourly));
+        this.loading.set(false);
+        if (total === 0) return;
+
+        const peak = hourly.indexOf(Math.max(...hourly));
+        const quiet = hourly.indexOf(Math.min(...hourly));
+        const fmtH = (h: number) => `${String(h).padStart(2, '0')}:00–${String((h + 1) % 24).padStart(2, '0')}:00`;
+        this.peakHour.set(fmtH(peak));
+        this.quietHour.set(fmtH(quiet));
+
+        const morning = hourly.slice(6, 12).reduce((a, b) => a + b, 0);
+        this.morningPct.set(`${((morning / total) * 100).toFixed(1)}%`);
+
+        const meanHour = (arr: number[]) => {
+          const sum = arr.reduce((a, b) => a + b, 0);
+          if (sum === 0) return null;
+          return arr.reduce((acc, v, h) => acc + v * (h + 0.5), 0) / sum;
+        };
+        const wd = meanHour(weekday), we = meanHour(weekend);
+        if (wd == null || we == null) {
+          this.weekendShift.set('—');
+        } else {
+          const diff = we - wd;
+          this.weekendShift.set(Math.abs(diff) < 0.2 ? 'similar'
+            : `${Math.abs(diff).toFixed(1)}h ${diff > 0 ? 'later' : 'earlier'}`);
+        }
+      },
+      error: () => { this.segments.set(this.toPaths(Array(24).fill(0))); this.hasData.set(false); this.loading.set(false); },
     });
+  }
+
+  private toPaths(hourly: number[]): { d: string; fill: string }[] {
+    const max = Math.max(...hourly, 0.001);
     const { cx, cy, rIn, rMax } = this;
-    return data.map((v, i) => {
+    return hourly.map((minutes, i) => {
+      const v = Math.max(minutes / max, 0.04); // keep a sliver visible so the dial reads as 24 sectors
       const a1 = (i / 24) * Math.PI * 2 - Math.PI / 2;
       const a2 = ((i + 1) / 24) * Math.PI * 2 - Math.PI / 2;
       const r  = rIn + (rMax - rIn) * v;
@@ -505,7 +601,7 @@ export class DashboardPolarClockComponent {
       const fill = v > 0.6 ? 'var(--accent)' : v > 0.4 ? 'rgba(255,90,54,0.6)' : 'rgba(255,90,54,0.25)';
       return { d: `M${x1} ${y1}L${x2} ${y2}A${r} ${r} 0 0 1 ${x3} ${y3}L${x4} ${y4}A${rIn} ${rIn} 0 0 0 ${x1} ${y1}Z`, fill };
     });
-  })();
+  }
 }
 
 /* ─── Transport Mode Breakdown (from /timeline/transport-breakdown) ─── */

@@ -41,25 +41,27 @@ public class TimelineEmbeddingRepository {
         this.table = t;
     }
 
-    public boolean exists(Long userId, String segmentType, long segmentId) {
-        Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM " + table + " " +
-                        "WHERE user_id = ? AND segment_type = ? AND segment_id = ?",
-                Integer.class, userId, segmentType, segmentId);
-        return count != null && count > 0;
-    }
+//    public boolean exists(Long userId, String segmentType, long segmentId) {
+//        Integer count = jdbc.queryForObject(
+//                "SELECT COUNT(*) FROM " + table + " " +
+//                        "WHERE user_id = ? AND segment_type = ? AND segment_id = ?",
+//                Integer.class, userId, segmentType, segmentId);
+//        return count != null && count > 0;
+//    }
 
     /** Removes all embeddings for a user. Used to force a full re-index. Returns rows deleted. */
     public int deleteAllForUser(Long userId) {
         return jdbc.update("DELETE FROM " + table + " WHERE user_id = ?", userId);
     }
 
-    public void insert(Long userId, String segmentType, long segmentId, String summary,
+    public int insert(Long userId, String segmentType, long segmentId, String summary,
                        float[] embedding, LocalDate segmentDate, Instant startTime, Instant endTime) {
-        jdbc.update(
+        return jdbc.update(
                 "INSERT INTO " + table + " " +
                         "(user_id, segment_type, segment_id, summary, embedding, segment_date, start_time, end_time) " +
-                        "VALUES (?, ?, ?, ?, CAST(? AS vector), ?, ?, ?)",
+                        "VALUES (?, ?, ?, ?, CAST(? AS vector), ?, ?, ?) " +
+                        " ON CONFLICT (user_id, segment_type, segment_id) DO NOTHING ",
+
                 userId, segmentType, segmentId, summary, toVectorLiteral(embedding),
                 segmentDate, Timestamp.from(startTime), Timestamp.from(endTime));
     }

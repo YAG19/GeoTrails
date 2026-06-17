@@ -251,3 +251,15 @@ export interface RagEmbedResponse {
   failed: number;
   elapsedSeconds: number;
 }
+
+/** A single progress notification streamed from POST /rag/embed/stream over SSE. */
+export interface RagEmbedEvent {
+  phase: 'started' | 'progress' | 'complete';
+  processed: number;
+  skipped: number;
+  failed: number;
+  total: number;
+  /** The requested start date (null = full history), echoed back for correlation. */
+  since: string | null;
+  elapsedSeconds: number;
+}

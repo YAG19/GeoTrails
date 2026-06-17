@@ -162,6 +162,16 @@
             <version>4.0.0</version>
         </dependency>
 
+        <!-- ==================== MCP (Model Context Protocol) ==================== -->
+        <!-- Exposes GeoTrail's read APIs as MCP tools an AI assistant can call.
+             mcp-spring-webmvc transitively pulls the core `mcp` SDK and plugs an
+             SSE transport into the existing Spring MVC app (no extra server). -->
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp-spring-webmvc</artifactId>
+            <version>0.10.0</version>
+        </dependency>
+
 
         <!-- ==================== TESTING ==================== -->
         <dependency>

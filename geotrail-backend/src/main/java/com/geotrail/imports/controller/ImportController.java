@@ -31,20 +31,9 @@ public class ImportController {
             @AuthenticationPrincipal User user,
             @RequestParam("file") MultipartFile file
     ) {
-        if (file.isEmpty()) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("File is empty"));
-        }
-
-        String filename = file.getOriginalFilename();
-        if (filename == null || !filename.toLowerCase().endsWith(".json")) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Only JSON files are supported"));
-        }
-
         ImportJob job = importService.startGoogleTimelineImport(user, file);
         return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(ApiResponse.success(toDto(job), "Import started"));
+                .body(ApiResponse.success(ImportJobDto.from(job), "Import started"));
     }
 
     /**
@@ -54,7 +43,7 @@ public class ImportController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ImportJobDto>> getJob(@PathVariable Long id) {
         ImportJob job = importService.getJob(id);
-        return ResponseEntity.ok(ApiResponse.success(toDto(job)));
+        return ResponseEntity.ok(ApiResponse.success(ImportJobDto.from(job)));
     }
 
     /**
@@ -66,47 +55,20 @@ public class ImportController {
             @AuthenticationPrincipal User user
     ) {
         List<ImportJobDto> jobs = importService.getJobsForUser(user.getId())
-                .stream().map(this::toDto).toList();
+                .stream().map(ImportJobDto::from).toList();
         return ResponseEntity.ok(ApiResponse.success(jobs));
     }
 
-    private ImportJobDto toDto(ImportJob job) {
-        return ImportJobDto.builder()
-                .id(job.getId())
-                .filename(job.getFilename())
-                .fileSizeBytes(job.getFileSizeBytes())
-                .status(job.getStatus().name())
-                .totalRecords(job.getTotalRecords())
-                .processed(job.getProcessed())
-                .duplicates(job.getDuplicates())
-                .errors(job.getErrors())
-                .startedAt(job.getStartedAt())
-                .completedAt(job.getCompletedAt())
-                .createdAt(job.getCreatedAt())
-                .build();
+    /**
+     * Retry a failed/incomplete import job.
+     * POST /api/imports/{id}/retry
+     */
+    @PostMapping("/{id}/retry")
+    public ResponseEntity<ApiResponse<ImportJobDto>> retry(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id
+    ) {
+        importService.retryForUserId(id);
+        return ResponseEntity.ok(ApiResponse.success(ImportJobDto.from(importService.getJob(id))));
     }
-
-
-    @GetMapping("/{id}/test")
-    public ResponseEntity<ApiResponse<ImportJobDto>> test(@AuthenticationPrincipal User user,
-                                                        @PathVariable Long id,
-                                                        @RequestParam("file") MultipartFile file) {
-        //Retry the importjob for id
-        // ImportJob job = importService.getJob(id);
-        ImportJob job = importService.startGoogleTimelineImport(user, file);
-
-        
-        return ResponseEntity.ok(ApiResponse.success(toDto(importService.getJob(id))));
-    } 
-
-     @GetMapping("/{id}/retry")
-    public ResponseEntity<ApiResponse<ImportJobDto>> retry(@AuthenticationPrincipal User user,
-                                                        @PathVariable Long id) {
-        //Retry the importjob for id
-        // ImportJob job = importService.getJob(id);
-        ImportJob job = importService.retryForUserId(id);
-
-        
-        return ResponseEntity.ok(ApiResponse.success(toDto(importService.getJob(id))));
-    }  
 }

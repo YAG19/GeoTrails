@@ -3,11 +3,11 @@ package com.geotrail.stats.service;
 import com.geotrail.stats.dto.AnomalyDto;
 import com.geotrail.timeline.dto.TimelineDtos.SegmentDto;
 import com.geotrail.timeline.service.TimelineService;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -19,9 +19,12 @@ import java.util.Map;
  * statistics (no LLM) over the travel segments in a window: unusually long single
  * trips, late-night movement, and unusually busy days. Cheap enough to run on
  * every dashboard load.
+ *
+ * <p>Hour-of-day and day bucketing use the configured display zone, not UTC —
+ * otherwise a 09:00 IST commute lands in the 03:30 UTC bucket and gets flagged
+ * as late-night movement.
  */
 @Service
-@RequiredArgsConstructor
 public class AnomalyService {
 
     /** A trip must clear both the statistical bar and this floor to count as "long". */
@@ -29,6 +32,13 @@ public class AnomalyService {
     private static final int MAX_RESULTS = 12;
 
     private final TimelineService timelineService;
+    private final ZoneId zone;
+
+    public AnomalyService(TimelineService timelineService,
+                          @Value("${geotrail.rag.display-zone:Asia/Kolkata}") String displayZone) {
+        this.timelineService = timelineService;
+        this.zone = ZoneId.of(displayZone);
+    }
 
     public List<AnomalyDto> detect(Long userId, Instant from, Instant to) {
         List<SegmentDto> segments = timelineService.getSegments(userId, from, to);
@@ -77,7 +87,7 @@ public class AnomalyService {
     private List<AnomalyDto> lateNightTrips(List<SegmentDto> activities) {
         List<AnomalyDto> out = new ArrayList<>();
         for (SegmentDto s : activities) {
-            int hour = s.startTime().atZone(ZoneOffset.UTC).getHour();
+            int hour = s.startTime().atZone(zone).getHour();
             if (hour >= 0 && hour < 5) {
                 out.add(new AnomalyDto(
                         date(s.startTime()), "LATE_NIGHT",
@@ -119,8 +129,8 @@ public class AnomalyService {
         return s.type().replaceFirst("^IN_", "").replace('_', ' ').toLowerCase();
     }
 
-    private static String date(Instant t) {
-        return t.atZone(ZoneOffset.UTC).toLocalDate().toString();
+    private String date(Instant t) {
+        return t.atZone(zone).toLocalDate().toString();
     }
 
     private static double mean(double[] v) {

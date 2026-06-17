@@ -1,5 +1,6 @@
 package com.geotrail.imports.dto;
 
+import com.geotrail.imports.entity.ImportJob;
 import lombok.Builder;
 import lombok.Data;
 
@@ -19,6 +20,22 @@ public class ImportJobDto {
     private Instant startedAt;
     private Instant completedAt;
     private Instant createdAt;
+
+    public static ImportJobDto from(ImportJob job) {
+        return ImportJobDto.builder()
+                .id(job.getId())
+                .filename(job.getFilename())
+                .fileSizeBytes(job.getFileSizeBytes())
+                .status(job.getStatus().name())
+                .totalRecords(job.getTotalRecords())
+                .processed(job.getProcessed())
+                .duplicates(job.getDuplicates())
+                .errors(job.getErrors())
+                .startedAt(job.getStartedAt())
+                .completedAt(job.getCompletedAt())
+                .createdAt(job.getCreatedAt())
+                .build();
+    }
 
     /**
      * Progress percentage (0-100).

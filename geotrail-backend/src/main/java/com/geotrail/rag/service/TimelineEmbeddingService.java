@@ -9,7 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -18,6 +20,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Reads a user's visits and activities, turns each into a summary sentence, embeds it,
@@ -73,6 +76,40 @@ public class TimelineEmbeddingService {
     }
 
     /**
+     * Streaming variant for the SSE endpoint: runs the embedding on a background virtual thread
+     * and pushes {@code started}/{@code progress}/{@code complete} events to the client over the
+     * supplied emitter, so the frontend can show live progress and react the moment indexing for
+     * the requested date range finishes. Errors are pushed to the client as a terminal stream error.
+     */
+    @Async
+    public void embedToEmitter(Long userId, LocalDate since, boolean force, SseEmitter emitter) {
+        try {
+            EmbeddingReport report = embed(userId, since, force,
+                    event -> sendEvent(emitter, userId, event));
+            sendEvent(emitter, userId, new EmbedEvent("complete", report.processed(), report.skipped(),
+                    report.failed(), report.processed() + report.skipped() + report.failed(),
+                    since, report.elapsed().toSeconds()));
+            emitter.complete();
+        } catch (Exception e) {
+            log.error("SSE embedding run failed for user {}", userId, e);
+            try {
+                emitter.completeWithError(e);
+            } catch (Exception ignored) {
+                // emitter already torn down (e.g. client disconnected) — nothing more to do
+            }
+        }
+    }
+
+    /** Pushes a single SSE event, swallowing send failures (typically a disconnected client). */
+    private void sendEvent(SseEmitter emitter, Long userId, EmbedEvent event) {
+        try {
+            emitter.send(SseEmitter.event().name(event.phase()).data(event));
+        } catch (IOException | IllegalStateException e) {
+            log.debug("SSE send failed for user {} (client gone?): {}", userId, e.toString());
+        }
+    }
+
+    /**
      * Re-indexes from scratch: deletes the user's existing embeddings first, so every
      * segment's summary is regenerated (e.g. to pick up newly geocoded area names).
      */
@@ -81,6 +118,10 @@ public class TimelineEmbeddingService {
     }
 
     private EmbeddingReport embed(Long userId, LocalDate since, boolean force) {
+        return embed(userId, since, force, event -> { });
+    }
+
+    private EmbeddingReport embed(Long userId, LocalDate since, boolean force, Consumer<EmbedEvent> listener) {
         Instant started = Instant.now();
         if (force) {
             int deleted = repository.deleteAllForUser(userId);
@@ -95,6 +136,8 @@ public class TimelineEmbeddingService {
         int skipped = 0;
         int failed = 0;
 
+        listener.accept(new EmbedEvent("started", 0, 0, 0, total, since, 0));
+
         // Pace the loop to the active provider's rate limit. The embedding call is the only
         // throttled work here, so we sleep this long after each *attempted* embed (skipped rows
         // make no API call and are not paced). 0 = local provider, no throttle.
@@ -106,15 +149,16 @@ public class TimelineEmbeddingService {
 
         for (int i = 0; i < pending.size(); i++) {
             Pending p = pending.get(i);
-            if (repository.exists(userId, p.segmentType().name(), p.segmentId())) {
-                skipped++;
-                continue;
-            }
+//            if (repository.exists(userId, p.segmentType().name(), p.segmentId())) {
+//                skipped++;
+//                continue;
+//            }
             try {
                 float[] vector = embeddingProvider.embed(p.summary());
-                repository.insert(userId, p.segmentType().name(), p.segmentId(), p.summary(),
+                int num = repository.insert(userId, p.segmentType().name(), p.segmentId(), p.summary(),
                         vector, p.segmentDate(), p.startTime(), p.endTime());
                 processed++;
+                System.out.println("Inserted " + num + " rows for " + p.segmentType() + " #" + p.segmentId());
             } catch (Exception e) {
                 // Per-row isolation: never let one bad row fail the whole batch.
                 failed++;
@@ -126,6 +170,8 @@ public class TimelineEmbeddingService {
 
             if ((i + 1) % PROGRESS_LOG_EVERY == 0) {
                 log.info("Embedded {}/{} segments...", i + 1, total);
+                long elapsed = Duration.between(started, Instant.now()).toSeconds();
+                listener.accept(new EmbedEvent("progress", processed, skipped, failed, total, since, elapsed));
             }
         }
 
@@ -181,5 +227,21 @@ public class TimelineEmbeddingService {
     }
 
     public record EmbeddingReport(int processed, int skipped, int failed, Duration elapsed) {
+    }
+
+    /**
+     * One progress notification streamed to the client over SSE.
+     *
+     * @param phase          {@code started}, {@code progress}, or {@code complete}
+     * @param processed      segments embedded so far (or in total, on completion)
+     * @param skipped        segments skipped (already embedded)
+     * @param failed         segments that failed to embed
+     * @param total          total segments to process for this run
+     * @param since          the requested start date (null = full history); echoed back so the
+     *                       frontend can correlate the notification with the date it asked for
+     * @param elapsedSeconds wall-clock seconds since the run started
+     */
+    public record EmbedEvent(String phase, int processed, int skipped, int failed, int total,
+                             LocalDate since, long elapsedSeconds) {
     }
 }

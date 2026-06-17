@@ -2,11 +2,11 @@ package com.geotrail.location.controller;
 
 import com.geotrail.auth.entity.User;
 import com.geotrail.common.dto.ApiResponse;
+import com.geotrail.common.dto.PageResponse;
 import com.geotrail.location.dto.LocationDtos.*;
 import com.geotrail.location.service.LocationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -55,12 +55,13 @@ public class LocationController {
      * GET /api/locations/paginated?page=0&size=50
      */
     @GetMapping("/paginated")
-    public ResponseEntity<ApiResponse<Page<Response>>> getPointsPaginated(
+    public ResponseEntity<ApiResponse<PageResponse<Response>>> getPointsPaginated(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size
     ) {
-        Page<Response> result = locationService.getPointsPaginated(user.getId(), page, size);
+        PageResponse<Response> result =
+                PageResponse.from(locationService.getPointsPaginated(user.getId(), page, size));
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
@@ -126,8 +127,8 @@ public class LocationController {
     }
 
     @GetMapping("/activity-type")
-    public ResponseEntity<List<String>> getDistinctActivityOfUser(
+    public ResponseEntity<ApiResponse<List<String>>> getDistinctActivityOfUser(
             @AuthenticationPrincipal User user){
-        return ResponseEntity.ok(locationService.getDistinctActivityType(user.getId()));
+        return ResponseEntity.ok(ApiResponse.success(locationService.getDistinctActivityType(user.getId())));
     }
 }

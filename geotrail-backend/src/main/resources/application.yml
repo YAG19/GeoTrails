@@ -95,8 +95,13 @@ ollama:
 geotrail:
   websocket:
     enabled: false
+  # --- MCP server (AI assistant access to read APIs) ---
+  mcp:
+    # Username whose data the MCP tools expose. Leave blank to use the first
+    # user in the DB (fine for a single-user self-hosted install).
+    username: ${MCP_USERNAME:}
   rag:
-    llm-provider: ${RAG_LLM_PROVIDER:ollama}   # which chat backend answers: "lmstudio" | "claude" | "gemini" | "ollama"
+    llm-provider: ${RAG_LLM_PROVIDER:gemini}   # which chat backend answers: "lmstudio" | "claude" | "gemini" | "ollama"
     # which model produces vectors (separate axis from llm-provider). "lmstudio" (local, default) | "gemini".
     # Each provider writes/reads its OWN table, so switching does NOT require dropping existing vectors,
     # but you must re-run /api/rag/embed to populate the new provider's table before querying with it.

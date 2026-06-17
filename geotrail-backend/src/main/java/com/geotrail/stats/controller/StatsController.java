@@ -6,7 +6,6 @@ import com.geotrail.stats.dto.ActivityDistanceDto;
 import com.geotrail.stats.dto.AnomalyDto;
 import com.geotrail.stats.dto.DailyStatDto;
 import com.geotrail.stats.dto.DashboardSummaryDto;
-import com.geotrail.stats.scheduler.StatsComputeScheduler;
 import com.geotrail.stats.service.AnomalyService;
 import com.geotrail.stats.service.StatsService;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +24,6 @@ import java.util.List;
 public class StatsController {
 
     private final StatsService statsService;
-    private final StatsComputeScheduler statsComputeScheduler;
     private final AnomalyService anomalyService;
 
     @GetMapping("/dashboard")
@@ -35,7 +33,6 @@ public class StatsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) Integer currentYear
     ) {
-//        statsService.computeStatsForDate(user.getId(),LocalDate.now().minusDays(1));
         return ResponseEntity.ok(ApiResponse.success(statsService.getDashboardSummary(user.getId(), from, to, currentYear)));
     }
 
@@ -69,11 +66,5 @@ public class StatsController {
             @RequestParam Instant to
     ) {
         return ResponseEntity.ok(ApiResponse.success(anomalyService.detect(user.getId(), from, to)));
-    }
-
-    @GetMapping("/scheduler/{id}")
-    public ResponseEntity<String> startScheduler(@PathVariable User userId){
-        statsComputeScheduler.computeDailyStats();
-        return ResponseEntity.ok("Success");
     }
 }

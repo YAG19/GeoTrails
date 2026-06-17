@@ -7,7 +7,7 @@ services:
   frontend:
     build: ./geotrail-frontend
     ports:
-      - "4200:80"
+      - "4000:80"
     depends_on:
       - backend
     restart: unless-stopped

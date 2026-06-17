@@ -58,7 +58,7 @@ cd geotrail-frontend
 npm install
 ng serve
 ```
-Frontend starts at http://localhost:4200
+Frontend starts at http://localhost:3000
 
 ## Production Deployment
 
@@ -66,6 +66,7 @@ Frontend starts at http://localhost:4200
 ```bash
 docker compose up -d
 ```
+Frontend starts at http://localhost:4000 (Grafana at http://localhost:3000)
 
 ### Deploy to Oracle Cloud (Always-Free)
 See [docs/deploy-oracle-cloud.md](docs/deploy-oracle-cloud.md) for step-by-step guide.

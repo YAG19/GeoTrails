@@ -39,6 +39,8 @@ public class ImportService {
      * Creates the job record synchronously, then processes asynchronously.
      */
     public ImportJob startGoogleTimelineImport(User user, MultipartFile file) {
+        validateImportFile(file);
+
         ImportJob job = ImportJob.builder()
                 .user(user)
                 .filename(file.getOriginalFilename())
@@ -55,6 +57,20 @@ public class ImportService {
         //Start dailyStatGeneration
 //        statsService.computeStatsForDate(job.getId(),LocalDate.now().minusDays(1));
         return job;
+    }
+
+    /**
+     * Validate an uploaded import file. Throws {@link IllegalArgumentException} (mapped to 400 by
+     * the global handler) when the file is empty or isn't a JSON file.
+     */
+    private void validateImportFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
+        }
+        String filename = file.getOriginalFilename();
+        if (filename == null || !filename.toLowerCase().endsWith(".json")) {
+            throw new IllegalArgumentException("Only JSON files are supported");
+        }
     }
 
     /**

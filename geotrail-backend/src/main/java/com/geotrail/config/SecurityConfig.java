@@ -1,9 +1,9 @@
 package com.geotrail.config;
 
 import com.geotrail.auth.filter.JwtAuthFilter;
+import com.geotrail.tracking.filter.OwnTracksAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -30,11 +30,15 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final OwnTracksAuthFilter ownTracksAuthFilter;
     private final UserDetailsService userDetailsService;
 
     @Autowired
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter, @Lazy UserDetailsService userDetailsService) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter,
+                          OwnTracksAuthFilter ownTracksAuthFilter,
+                          @Lazy UserDetailsService userDetailsService) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.ownTracksAuthFilter = ownTracksAuthFilter;
         this.userDetailsService = userDetailsService;
     }
     @Bean
@@ -50,13 +54,16 @@ public class SecurityConfig {
                         .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()  // WebSocket handshake
-                        // OwnTracks endpoint uses its own auth (HTTP Basic or token in payload)
-                        .requestMatchers(HttpMethod.POST, "/owntracks").permitAll()
+                        // MCP server: SSE stream + JSON-RPC message endpoint (POC — no auth)
+                        .requestMatchers("/sse", "/mcp/**").permitAll()
+                        // OwnTracks endpoint is authenticated by OwnTracksAuthFilter (HTTP Basic)
+                        // before the chain reaches here, so it requires authentication like the rest.
                         // Everything else requires authentication
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(ownTracksAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 
@@ -82,8 +89,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-                "http://localhost:4200",   // Angular dev server
-                "http://localhost:80",     // Docker frontend
+                "http://localhost:3000",   // Angular dev server (ng serve)
+                "http://localhost:4000",   // Docker frontend
+                "http://localhost:80",     // Docker frontend (direct)
                 "http://localhost",
                 System.getenv().getOrDefault("FRONTEND_URL", "")
         ));

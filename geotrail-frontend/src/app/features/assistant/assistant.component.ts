@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
-import { RagQueryRequest, RagEmbedRequest } from '../../core/models/api.models';
+import { RagQueryRequest, RagEmbedRequest, RagEmbedEvent } from '../../core/models/api.models';
 
 interface Message {
   sender: 'user' | 'assistant';
@@ -120,11 +120,19 @@ type LlmProvider = 'gemini' | 'ollama' | 'lmstudio';
             />
           </div>
 
-          <button 
-            class="btn btn-gradient w-100" 
-            (click)="triggerEmbedding()" 
+          <button
+            class="btn btn-gradient w-100"
+            (click)="triggerEmbedding()"
             [disabled]="indexing()">
-            {{ indexing() ? '⚡ Indexing...' : '⚡ Index Timeline data' }}
+            @if (indexing()) {
+              @if (indexProgress(); as p) {
+                ⚡ Indexing {{ p.processed }}/{{ p.total }}...
+              } @else {
+                ⚡ Indexing...
+              }
+            } @else {
+              ⚡ Index Timeline data
+            }
           </button>
 
           @if (embedResult()) {
@@ -765,6 +773,7 @@ export class AssistantComponent implements OnInit {
   lmsConnected = signal<boolean>(false);
   typing = signal<boolean>(false);
   indexing = signal<boolean>(false);
+  indexProgress = signal<{ processed: number; total: number } | null>(null);
   loadingModels = signal<boolean>(false);
   messages = signal<Message[]>([]);
   embedResult = signal<any | null>(null);
@@ -832,6 +841,7 @@ export class AssistantComponent implements OnInit {
 
   triggerEmbedding(): void {
     this.indexing.set(true);
+    this.indexProgress.set(null);
     this.embedResult.set(null);
 
     const req: RagEmbedRequest = {};
@@ -839,13 +849,26 @@ export class AssistantComponent implements OnInit {
       req.since = this.embedSince;
     }
 
-    this.apiService.triggerRagEmbedding(req).subscribe({
-      next: (res) => {
+    // Stream progress over SSE so we're notified the moment indexing for the requested date finishes.
+    this.apiService.streamRagEmbedding(req).subscribe({
+      next: (event: RagEmbedEvent) => {
+        this.indexProgress.set({ processed: event.processed, total: event.total });
+        if (event.phase === 'complete') {
+          this.embedResult.set({
+            processed: event.processed,
+            skipped: event.skipped,
+            failed: event.failed,
+            elapsedSeconds: event.elapsedSeconds,
+          });
+        }
+      },
+      complete: () => {
         this.indexing.set(false);
-        this.embedResult.set(res);
+        this.indexProgress.set(null);
       },
       error: (err) => {
         this.indexing.set(false);
+        this.indexProgress.set(null);
         alert('Indexing failed. Check backend logs. Make sure LM Studio local embedding server is active.');
         console.error(err);
       }
