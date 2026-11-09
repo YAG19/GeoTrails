@@ -24,4 +24,5 @@ public interface UserActivityRepository extends JpaRepository<UserActivity, Long
     List<UserActivity> findByUserAndTimeRange(@Param("userId") Long userId,
                                               @Param("from") Instant from,
                                               @Param("to") Instant to);
+    List<UserActivity> findByUserIdAndActivityDate(Long userId, java.time.LocalDate activityDate);
 }

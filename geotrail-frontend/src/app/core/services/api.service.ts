@@ -32,6 +32,8 @@ import {
   NarrativeResponse,
   LabelSuggestion,
   Anomaly,
+  AssistantChatRequest,
+  AssistantChatResponse,
 } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
@@ -178,6 +180,20 @@ export class ApiService {
       .post<ApiResponse<TimelineSegment>>(`${this.baseUrl}/timeline/segments/${id}/correct`, { activityType })
       .pipe(map((res) => res.data));
   }
+
+  // ==================== Assistant ====================
+
+  getLMSModels(url: string): Observable<any> {
+    const cleanUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
+    return this.http.get<any>(`${cleanUrl}/v1/models`);
+  }
+
+  sendAssistantChat(request: AssistantChatRequest): Observable<AssistantChatResponse> {
+    return this.http
+      .post<ApiResponse<AssistantChatResponse>>(`${this.baseUrl}/assistant/chat`, request)
+      .pipe(map((res) => res.data));
+  }
+
 
   // ==================== Locations ====================
 

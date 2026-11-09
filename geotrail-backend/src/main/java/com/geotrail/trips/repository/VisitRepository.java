@@ -34,16 +34,13 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
                                      @Param("minVisits") int minVisits,
                                      @Param("limit") int limit);
 
-    /** Stationary stays whose start falls within [from, to], ordered chronologically. */
-    @Query("""
-        SELECT v FROM Visit v
-        WHERE v.user.id = :userId
-          AND v.startedAt >= :from AND v.startedAt < :to
-        ORDER BY v.startedAt ASC
-        """)
-    List<Visit> findByUserAndTimeRange(@Param("userId") Long userId,
-                                       @Param("from") Instant from,
-                                       @Param("to") Instant to);
+    /** Stationary stays overlapping [from, to]; eager-fetches place to avoid N+1. */
+    @Query("SELECT v FROM Visit v LEFT JOIN FETCH v.place WHERE v.user.id = :userId AND (v.startedAt <= :to AND (v.endedAt IS NULL OR v.endedAt >= :from)) ORDER BY v.startedAt ASC")
+    List<Visit> findByUserAndTimeRange(
+            @Param("userId") Long userId,
+            @Param("from") Instant from,
+            @Param("to") Instant to
+    );
 
     /** Aggregate time-spent per semantic_type (HOME/WORK/...) over a window. */
     @Query("""

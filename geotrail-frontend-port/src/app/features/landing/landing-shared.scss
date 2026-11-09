@@ -1,0 +1,96 @@
+/* Shared tokens for landing components. Each component imports this. */
+
+.label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.label-accent { color: var(--accent); }
+
+.display {
+  font-family: 'Instrument Serif', 'Times New Roman', serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 48px;
+  position: relative;
+  z-index: 1;
+}
+@media (max-width: 700px) { .container { padding: 0 20px; } }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 140ms ease;
+  border-radius: 0;
+  text-decoration: none;
+}
+.btn:hover { border-color: var(--ink-3); }
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a0d08;
+}
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-arrow { font-size: 14px; line-height: 1; }
+
+.section-header-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 36px;
+  align-items: end;
+}
+.section-header-tag {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.section-header-title {
+  font-size: clamp(36px, 5vw, 64px);
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+.section-header-title em {
+  color: var(--accent);
+  font-style: italic;
+}
+.section-header-sub {
+  margin-top: 18px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  max-width: 540px;
+}
+
+@keyframes gt-blink {
+  0%,49% { opacity: 1; }
+  50%,100% { opacity: 0; }
+}
+.cursor::after {
+  content: '_';
+  animation: gt-blink 1s steps(1) infinite;
+  margin-left: 2px;
+}
+
+@keyframes gt-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}

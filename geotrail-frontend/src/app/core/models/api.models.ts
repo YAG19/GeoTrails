@@ -263,3 +263,24 @@ export interface RagEmbedEvent {
   since: string | null;
   elapsedSeconds: number;
 }
+// ==================== Assistant ====================
+export interface AssistantChatRequest {
+  message: string;
+  model: string;
+  lmStudioUrl?: string;
+  temperature?: number;
+}
+
+export interface AssistantSourceRecord {
+  type: string;
+  time: string;
+  details: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface AssistantChatResponse {
+  response: string;
+  sources: AssistantSourceRecord[];
+}
+

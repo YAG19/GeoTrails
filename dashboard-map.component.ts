@@ -62,9 +62,9 @@ import { LocationPoint, Place } from '../../core/models/api.models';
         <div class="crosshair-h"></div>
 
         <!-- scrubber -->
-     <!--     <div class="scrubber">
+        <div class="scrubber">
           <div class="scrubber-meta">
-             <span>SCRUB · {{ scrubLabel() }}</span>
+            <span>SCRUB · {{ scrubLabel() }}</span>
             <span class="num">{{ pointCount() | number }} pts · render {{ renderMs() }}ms</span>
           </div>
           <div class="scrubber-bars">
@@ -76,7 +76,7 @@ import { LocationPoint, Place } from '../../core/models/api.models';
           <div class="scrubber-labels">
             @for (y of scrubYears; track y) { <span>{{ y }}</span> }
           </div>
-        </div> -->
+        </div>
 
         @if (loading()) {
           <div class="map-loading">loading location data…</div>
@@ -86,7 +86,6 @@ import { LocationPoint, Place } from '../../core/models/api.models';
   `,
   styleUrls: ['./dashboard.scss'],
   styles: [`
-    :host { display: flex; flex-direction: column; flex: 1; min-height: 0; }
     .map-card { flex: 1; min-height: 0; }
     .head-left { display: flex; gap: 14px; align-items: center; }
     .head-right { display: flex; gap: 6px; }
@@ -158,54 +157,32 @@ import { LocationPoint, Place } from '../../core/models/api.models';
 export class DashboardMapComponent implements AfterViewInit, OnDestroy {
   @ViewChild('mapEl', { static: true }) mapEl!: ElementRef<HTMLDivElement>;
   @Input() set scope(v: string) { this._scope = v; this.loadForScope(); }
-  @Input() set filter(v: string) {
-    const next = v || 'all';
-    if (next === this._filter) return;
-    this._filter = next;
-    this.renderFiltered();
-  }
 
   private api = inject(ApiService);
   private map?: L.Map;
   private trailsLayer = L.layerGroup();
   private placesLayer = L.layerGroup();
-  private heatLayer = L.layerGroup();
+  private heatLayer   = L.layerGroup();
 
   _scope = 'ALL';
-  _filter = 'all';
-  private loadedPoints: LocationPoint[] = [];
-  loading = signal(false);
-  hoverLat = signal('13.028');
-  hoverLng = signal('77.665');
-  zoom = signal(7);
+  loading   = signal(false);
+  hoverLat  = signal('52.51630');
+  hoverLng  = signal('13.37770');
+  zoom      = signal(12);
   pointCount = signal(0);
-  renderMs = signal(0);
+  renderMs  = signal(0);
   scopeLabel = signal('ALL TIME');
-  dateRange = signal('');
+  dateRange  = signal('');
 
   layers = { trails: true, places: true, heat: true };
 
   scrubBars: number[] = [];
   scrubYears: string[] = [];
-  scrubLabel = signal('all time');
 
   ngAfterViewInit() {
-    this.api.getHeatmapCenter().subscribe({
-      next: (center) => {
-        const hasData = center.latitude != null && center.longitude != null;
-        this.initMap(
-          hasData ? [center.latitude!, center.longitude!] : [13.028, 77.665],
-          hasData ? 7 : 12,
-        );
-      },
-      error: () => this.initMap([13.028, 77.665], 7),
-    });
-  }
-
-  private initMap(center: [number, number], zoom: number) {
     this.map = L.map(this.mapEl.nativeElement, {
-      center,
-      zoom,
+      center: [52.515, 13.38],
+      zoom: 12,
       zoomControl: false,
       attributionControl: true,
       scrollWheelZoom: true,
@@ -229,7 +206,6 @@ export class DashboardMapComponent implements AfterViewInit, OnDestroy {
 
     this.buildScrubber();
     this.loadForScope();
-    setTimeout(() => this.map?.invalidateSize(), 0);
   }
 
   ngOnDestroy() { this.map?.remove(); }
@@ -245,7 +221,6 @@ export class DashboardMapComponent implements AfterViewInit, OnDestroy {
     if (!this.map) return;
     const { from, to, label } = this.scopeToRange(this._scope);
     this.scopeLabel.set(label);
-    this.scrubLabel.set(label.toLowerCase());
     this.dateRange.set(`${from} → ${to}`);
     this.loading.set(true);
     const t0 = Date.now();
@@ -253,15 +228,15 @@ export class DashboardMapComponent implements AfterViewInit, OnDestroy {
     // Load location points
     this.api.queryLocations({ from, to, size: 5000 }).subscribe({
       next: (pts) => {
-        this.loadedPoints = pts;
+        this.trailsLayer.clearLayers();
+        this.heatLayer.clearLayers();
+        this.pointCount.set(pts.length);
         this.renderMs.set(Date.now() - t0);
-        this.renderFiltered();
+        this.renderPoints(pts);
         this.loading.set(false);
       },
       error: () => {
-        this.loadedPoints = [];
-        this.trailsLayer.clearLayers();
-        this.heatLayer.clearLayers();
+        // fallback to seed data if API unavailable
         this.renderSeedData();
         this.loading.set(false);
       },
@@ -270,21 +245,8 @@ export class DashboardMapComponent implements AfterViewInit, OnDestroy {
     // Load places
     this.api.getPlaces().subscribe({
       next: (places) => { this.renderPlaces(places); },
-      error: () => { },
+      error: () => {},
     });
-  }
-
-  private renderFiltered() {
-    if (!this.map) return;
-    this.trailsLayer.clearLayers();
-    this.heatLayer.clearLayers();
-    const f = (this._filter || 'all').toLowerCase();
-    const filtered = f === 'all'
-      ? this.loadedPoints
-      : this.loadedPoints.filter(p => (p.activityType ?? '').toLowerCase() === f);
-    this.pointCount.set(filtered.length);
-    this.renderPoints(filtered);
-    console.log("filtered", filtered);
   }
 
   private renderPoints(pts: LocationPoint[]) {
@@ -294,7 +256,7 @@ export class DashboardMapComponent implements AfterViewInit, OnDestroy {
     const trails: LocationPoint[][] = [];
     let cur: LocationPoint[] = [pts[0]];
     for (let i = 1; i < pts.length; i++) {
-      const gap = new Date(pts[i].recordedAt).getTime() - new Date(pts[i - 1].recordedAt).getTime();
+      const gap = new Date(pts[i].recordedAt).getTime() - new Date(pts[i-1].recordedAt).getTime();
       if (gap > 30 * 60 * 1000) { trails.push(cur); cur = []; }
       cur.push(pts[i]);
     }
@@ -374,20 +336,20 @@ export class DashboardMapComponent implements AfterViewInit, OnDestroy {
       x = (x * 9301 + 49297) % 233280;
       return 0.2 + (x / 233280) * 0.8;
     });
-    this.scrubYears = ['2021', '2022', '2023', '2024', '2025', '2026'];
+    this.scrubYears = ['2021','2022','2023','2024','2025','2026'];
   }
 
   private scopeToRange(scope: string): { from: string; to: string; label: string } {
     const to = new Date();
     const from = new Date();
-    const fmt = (d: Date) => d.toISOString();
+    const fmt = (d: Date) => d.toISOString().slice(0, 10);
     switch (scope) {
-      case '1W': from.setDate(to.getDate() - 7); return { from: fmt(from), to: fmt(to), label: 'LAST 7 DAYS' };
+      case '1W': from.setDate(to.getDate() - 7);   return { from: fmt(from), to: fmt(to), label: 'LAST 7 DAYS' };
       case '1M': from.setMonth(to.getMonth() - 1); return { from: fmt(from), to: fmt(to), label: 'LAST 30 DAYS' };
       case '6M': from.setMonth(to.getMonth() - 6); return { from: fmt(from), to: fmt(to), label: 'LAST 6 MONTHS' };
       case '1Y': from.setFullYear(to.getFullYear() - 1); return { from: fmt(from), to: fmt(to), label: 'LAST YEAR' };
       case '5Y': from.setFullYear(to.getFullYear() - 5); return { from: fmt(from), to: fmt(to), label: 'LAST 5 YEARS' };
-      default: from.setFullYear(2020, 0, 1); return { from: fmt(from), to: fmt(to), label: 'ALL TIME' };
+      default:   from.setFullYear(2020, 0, 1);     return { from: fmt(from), to: fmt(to), label: 'ALL TIME' };
     }
   }
 }
