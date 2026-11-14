@@ -5,6 +5,15 @@
   <title>GeoTrail</title>
   <base href="/" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- light dark = follow the OS. ThemeService rewrites this to pin a scheme. -->
+  <meta name="color-scheme" content="light dark" />
+  <script>
+    // Apply a stored theme override before first paint (prevents a flash of the wrong theme).
+    try {
+      var s = localStorage.getItem('gt-theme');
+      if (s === 'light' || s === 'dark') document.querySelector('meta[name="color-scheme"]').content = s;
+    } catch (e) {}
+  </script>
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
 
   <!-- GeoTrail design fonts -->
@@ -14,13 +23,7 @@
     href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap"
     rel="stylesheet"
   />
-
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
+  <!-- Leaflet CSS is bundled via angular.json "styles"; no CDN copy needed. -->
 </head>
 <body>
   <app-root></app-root>

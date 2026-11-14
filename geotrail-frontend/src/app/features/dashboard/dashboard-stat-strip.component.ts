@@ -183,7 +183,8 @@ export class DashboardStatStripComponent implements OnInit {
     }
   }
 
-  private fmt(n: number): string {
+  private fmt(n: number | null | undefined): string {
+    if (n == null || Number.isNaN(n)) return '—';
     if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
     if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
     return n.toString();

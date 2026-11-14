@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpEvent, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../auth/auth.service';
@@ -183,11 +183,6 @@ export class ApiService {
 
   // ==================== Assistant ====================
 
-  getLMSModels(url: string): Observable<any> {
-    const cleanUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
-    return this.http.get<any>(`${cleanUrl}/v1/models`);
-  }
-
   sendAssistantChat(request: AssistantChatRequest): Observable<AssistantChatResponse> {
     return this.http
       .post<ApiResponse<AssistantChatResponse>>(`${this.baseUrl}/assistant/chat`, request)
@@ -281,6 +276,23 @@ export class ApiService {
     formData.append('file', file);
     return this.http
       .post<ApiResponse<ImportJob>>(`${this.baseUrl}/imports/google-timeline`, formData)
+      .pipe(map((res) => res.data));
+  }
+
+  /** Same as importGoogleTimeline, but emits raw HttpEvents so callers can show upload progress. */
+  importGoogleTimelineWithProgress(file: File): Observable<HttpEvent<ApiResponse<ImportJob>>> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<ApiResponse<ImportJob>>(
+      `${this.baseUrl}/imports/google-timeline`,
+      formData,
+      { reportProgress: true, observe: 'events' },
+    );
+  }
+
+  retryImportJob(id: number): Observable<ImportJob> {
+    return this.http
+      .post<ApiResponse<ImportJob>>(`${this.baseUrl}/imports/${id}/retry`, {})
       .pipe(map((res) => res.data));
   }
 

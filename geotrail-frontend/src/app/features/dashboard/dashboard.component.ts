@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { ThemeService } from '../../core/services/theme.service';
 import { CommonModule } from '@angular/common';
 
 import { DashboardTopbarComponent }         from './dashboard-topbar.component';
@@ -29,9 +30,7 @@ import {
  *
  * Fills the authenticated <main class="content"> area.
  * The app sidebar lives in AppComponent — we don't render one here.
- *
- * On init  → sets data-theme on <body> (activates CSS variable tokens)
- * On destroy → restores previous data-theme so other routes are unaffected
+ * Theme tokens are global (styles.scss); the toggle goes through ThemeService.
  */
 @Component({
   selector: 'app-dashboard',
@@ -169,35 +168,13 @@ import {
     }
   `],
 })
-export class DashboardComponent implements OnInit, OnDestroy {
+export class DashboardComponent {
+  private themeService = inject(ThemeService);
+
   scope = signal('6M');
-  theme = signal<'dark' | 'light'>('dark');
+  theme = this.themeService.scheme;
   filter = signal('all');
   mapMode = signal<'map' | 'playback'>('map');
-
-  private prevBodyTheme: string | null = null;
-
-  ngOnInit() {
-    // Restore any previously saved preference
-    try {
-      const saved = localStorage.getItem('gt-theme') as 'dark' | 'light' | null;
-      if (saved) this.theme.set(saved);
-    } catch {}
-
-    // Activate theme tokens — remember what was there before
-    this.prevBodyTheme = document.body.getAttribute('data-theme');
-    document.body.setAttribute('data-theme', this.theme());
-  }
-
-  ngOnDestroy() {
-    // Restore previous state so other routes (login, map, etc.) are unaffected
-    if (this.prevBodyTheme === null) {
-      document.body.removeAttribute('data-theme');
-    } else {
-      document.body.setAttribute('data-theme', this.prevBodyTheme);
-    }
-  }
-
 
   onFilterChange(f: string) {
     this.filter.set(f);
@@ -207,9 +184,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.scope.set(s);
   }
 
-  onThemeChange(t: 'dark' | 'light') {
-    this.theme.set(t);
-    document.body.setAttribute('data-theme', t);
-    try { localStorage.setItem('gt-theme', t); } catch {}
+  onThemeChange(_: 'dark' | 'light') {
+    this.themeService.toggle();
   }
 }

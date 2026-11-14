@@ -5,6 +5,7 @@ import { LandingHeroComponent } from './landing-hero.component';
 import { LandingDemoComponent } from './landing-demo.component';
 import { LandingImportsComponent } from './landing-imports.component';
 import { AuthService } from '../../core/auth/auth.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-landing',
@@ -43,7 +44,8 @@ import { AuthService } from '../../core/auth/auth.service';
           </div>
           <div class="nav-right">
             <span class="num utc">{{ utc() }}</span>
-            <button class="btn theme-toggle" (click)="toggleTheme()">
+            <button type="button" class="btn theme-toggle" (click)="toggleTheme()"
+                    [attr.aria-label]="theme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'">
               {{ theme() === 'dark' ? '☾ dark' : '☀ light' }}
             </button>
             @if (authService.isAuthenticated()) {
@@ -277,11 +279,11 @@ import { AuthService } from '../../core/auth/auth.service';
 })
 export class LandingComponent implements OnInit, OnDestroy {
   authService = inject(AuthService);
-  theme = signal<'dark' | 'light'>('dark');
+  private themeService = inject(ThemeService);
+  theme = this.themeService.scheme;
   utc = signal('');
   today = new Date().toISOString().slice(0, 10);
   private clockTimer?: any;
-  private prevBodyTheme: string | null = null;
 
   marqueeItems = [
     'lat 52.5163°N','lng 13.3777°E','alt 34m','speed 1.4 m/s','heading 286°',
@@ -293,28 +295,16 @@ export class LandingComponent implements OnInit, OnDestroy {
   ];
 
   ngOnInit() {
-    const saved = (typeof localStorage !== 'undefined' && localStorage.getItem('gt-theme')) as
-      | 'dark' | 'light' | null;
-    if (saved) this.theme.set(saved);
-
-    this.prevBodyTheme = document.body.getAttribute('data-theme');
-    document.body.setAttribute('data-theme', this.theme());
-
     this.tick();
     this.clockTimer = setInterval(() => this.tick(), 1000);
   }
 
   ngOnDestroy() {
     clearInterval(this.clockTimer);
-    if (this.prevBodyTheme === null) document.body.removeAttribute('data-theme');
-    else document.body.setAttribute('data-theme', this.prevBodyTheme);
   }
 
   toggleTheme() {
-    const next = this.theme() === 'dark' ? 'light' : 'dark';
-    this.theme.set(next);
-    document.body.setAttribute('data-theme', next);
-    try { localStorage.setItem('gt-theme', next); } catch {}
+    this.themeService.toggle();
   }
 
   private tick() {

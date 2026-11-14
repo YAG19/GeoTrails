@@ -5,12 +5,10 @@
 
 :host { display: block; }
 
-/* ── CSS variable bridge ──────────────────────────── */
-/* The dashboard lives inside the authenticated shell which does NOT
-   set data-theme. We set it via DashboardComponent.ngOnInit. */
+/* Theme tokens (--bg, --ink, --accent …) are global — see src/styles.scss. */
 
 /* ── Fonts ────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap');
+/* Fonts are loaded once from index.html (a CSS @import here was render-blocking and repeated per component). */
 
 /* ── Utility classes ──────────────────────────────── */
 .label {

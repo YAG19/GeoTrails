@@ -49,7 +49,9 @@ import { ApiService } from '../../core/services/api.service';
         <span class="num utc">{{ utc() }}</span>
         <button class="btn btn-icon" title="Search">⌕</button>
         <button class="btn btn-icon" title="Export">↗</button>
-        <button class="btn btn-icon" (click)="themeChange.emit(theme === 'dark' ? 'light' : 'dark')" title="Theme">
+        <button type="button" class="btn btn-icon" (click)="themeChange.emit(theme === 'dark' ? 'light' : 'dark')"
+                [attr.aria-label]="theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+                [title]="theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'">
           {{ theme === 'dark' ? '☾' : '☀' }}
         </button>
         <div class="avatar">JD</div>
@@ -123,7 +125,7 @@ export class DashboardTopbarComponent implements OnInit, OnDestroy {
     this.tick();
     this.timer = setInterval(() => this.tick(), 1000);
     this.apiService.getDistinctAtctivity().subscribe({
-      next: (places) => {console.log(places); this.filters.push(...places);  },
+      next: (places) => { this.filters.push(...places); },
       error: () => { },
     });
   }
